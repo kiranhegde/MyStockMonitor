@@ -9,69 +9,18 @@ from PyQt5.QtWidgets import QMessageBox, QAction, QFileDialog, QTabWidget \
 
 # import PyQt5.sip # required to function exe file
 import PyQt5.sip
-from BSheets.BSheetHospital import BalanceSheet as HospitalBsheet
-# from BSheets.BSheetPharmacy import BalanceSheet as hospital_bsheet
-from BSheets.BSheetPharmacy import BalanceSheet as PharmacyBsheet
 
-from DataBase.create_rk_db import create_payin_department_list_table, create_payout_detail_list_table, \
-    create_receptionPAYOUT_table_db_query, create_user_login_table, \
-    create_receptionPAYIN_table_db_query, create_unpaid_detail_list_table, \
-    create_pharmacyPAYIN_table_db_query, create_pharmacyPAYOUT_table_db_query, \
-    check_parameter_conditions
-
-from DataBase.login_management import Sign
-from DataBase.label_names import *
-
-from DataBase.sqlite3_operations import sqlite3_crud
-from DataBase.mysql_crud import mysql_table_crud
-
-from DataBase.utilities import FONT1, date_time_day_start_end
-from DataBase.utilities import make_nested_dict
-from GuiWidgets.gui_widgets_add_mysql_login import update_mysql_login
-from GuiWidgets.gui_widgets_add_user import add_new_user
-from GuiWidgets.gui_widgets_export_mysql_dates import export_mysql_dates
-from GuiWidgets.gui_widgets_report_to_excel import report_to_excel_by_date
-from GuiWidgets.gui_widgets_select_bsheet import select_bsheet
-from GuiWidgets.gui_widgets_dynamic_list import dynamic_list_editor
-from GuiWidgets.gui_widgets_for_casesheetHospital import list_of_casesheet_with_details_hospital
-from GuiWidgets.gui_widgets_for_casesheetMedical import list_of_casesheet_with_details_medical
-from GuiWidgets.gui_widgets_switch_gui import hospital_to_medical
-
-from GuiWidgets.gui_widgets_login_menu import Login
-
+from utility.libnames import WELCOME
+from mysql_tools.mysql_crud import mysql_table_crud
 
 # PEP8 Reformat Code press Ctrl+Alt+L.
-
-class TimerMessageBox(QMessageBox):
-    def __init__(self, timeout=3, titles="Wait..", displayInfo="Please Wait...", parent=None):
-        super(TimerMessageBox, self).__init__(parent)
-        self.msg = displayInfo
-        self.ttl = titles
-        self.setWindowTitle(self.ttl)
-        self.time_to_wait = timeout
-        self.setText(f"{self.msg} \n wait (closing automatically in {timeout} seconds.)")
-        self.setStandardButtons(QMessageBox.NoButton)
-        self.timer = QTimer(self)
-        self.timer.setInterval(1000)
-        self.timer.timeout.connect(self.changeContent)
-        self.timer.start()
-
-    def changeContent(self):
-        self.setText(f"{self.msg} \n wait (closing automatically in {self.time_to_wait} seconds.)")
-        self.time_to_wait -= 1
-        if self.time_to_wait <= 0:
-            self.close()
-
-    def closeEvent(self, event):
-        self.timer.stop()
-        event.accept()
 
 
 class MyMainWindow(QMainWindow):
 
     def __init__(self, parent=None):
         super(MyMainWindow, self).__init__(parent)
-        self.welcome = "RK Hospital, Daily Transaction"
+        self.welcome = WELCOME
         self.setWindowTitle(self.welcome)
         self.setWindowIcon(QIcon('icons/ksirtet.ico'))
         self.setGeometry(450, 150, 750, 600)
@@ -84,21 +33,21 @@ class MyMainWindow(QMainWindow):
         # self.showFullScreen()
 
     def UI(self):
-        self.check_sqlite_db_info()
-        self.extablish_db_connection()
-        self.check_db_tables_exists()
-        self.get_parameter_values()
+        # self.check_sqlite_db_info()
+        # self.extablish_db_connection()
+        # self.check_db_tables_exists()
+        # self.get_parameter_values()
 
         # backup_mysql(**self.db_cfg)
         # exit()
         # self.add_columns_name_to_table()
-        self.my_login()
+        # self.my_login()
         # print(self.user_list)
         self.toolBarMenu()
         self.toolBar()
-        self.tabWidgets()
+        # self.tabWidgets()
         # self.get_column_value_count()
-        self.widgets()
+        # self.widgets()
 
     # @mysql_db(DB_CFG)
     # def check_mysql(self):
@@ -493,8 +442,8 @@ class MyMainWindow(QMainWindow):
 
         # menubar.setLayoutDirection(Qt.RightToLeft)
         setting_menu = menubar.addMenu("Settings")
-        if self.my_access != "Administrator":
-            setting_menu.setEnabled(False)
+        # if self.my_access != "Administrator":
+        #     setting_menu.setEnabled(False)
         # setting_menu=menubar.addMenu(QIcon("icons/configure-2.png"),"Settings")
 
         user_admin_submenu = QMenu("&User Administration", self)
@@ -541,13 +490,13 @@ class MyMainWindow(QMainWindow):
 
         setting_menu.addMenu(mysql_submenu)
         # --------------------------------------
-        switch_submenu = QMenu("&Medical/Hospital Switch", self)
-        gui_switch = QAction("&Medical or Hospital", self)
-        gui_switch.triggered.connect(self.gui_switching)
-        gui_switch.setStatusTip('Switch Hospital between Medical software')
-        switch_submenu.addAction(gui_switch)
-
-        setting_menu.addMenu(switch_submenu)
+        # switch_submenu = QMenu("&Medical/Hospital Switch", self)
+        # gui_switch = QAction("&Medical or Hospital", self)
+        # gui_switch.triggered.connect(self.gui_switching)
+        # gui_switch.setStatusTip('Switch Hospital between Medical software')
+        # switch_submenu.addAction(gui_switch)
+        #
+        # setting_menu.addMenu(switch_submenu)
 
     def toolBar(self):
 
@@ -589,8 +538,8 @@ class MyMainWindow(QMainWindow):
         statement_file.setToolTip("Statement(Excel file) for the given time range")
         tb.addAction(statement_file)
         tb.addSeparator()
-        if self.my_access == "Write Only":
-            statement_file.setEnabled(False)
+        # if self.my_access == "Write Only":
+        #     statement_file.setEnabled(False)
 
         import_data = QAction(QIcon("icons/document-import.png"), "Import", self)
         import_data.triggered.connect(self.call_import_csv_to_mysql)
@@ -598,8 +547,8 @@ class MyMainWindow(QMainWindow):
         import_data.setToolTip("Import data from CSV")
         tb.addAction(import_data)
         tb.addSeparator()
-        if self.my_access != "Administrator":
-            import_data.setEnabled(False)
+        # if self.my_access != "Administrator":
+        #     import_data.setEnabled(False)
 
         export_data = QAction(QIcon("icons/document-export.png"), "Export", self)
         export_data.triggered.connect(self.export_mysql_csv)
@@ -607,8 +556,8 @@ class MyMainWindow(QMainWindow):
         export_data.setToolTip("Export data from CSV")
         tb.addAction(export_data)
         tb.addSeparator()
-        if self.my_access != "Administrator":
-            export_data.setEnabled(False)
+        # if self.my_access != "Administrator":
+        #     export_data.setEnabled(False)
 
         # settings_default = QAction(QIcon("icons/configure-2.png"), "Settings", self)
         # settings_default.triggered.connect(self.all_setting)
@@ -660,119 +609,14 @@ class MyMainWindow(QMainWindow):
         tb.addAction(quit_app)
         tb.addSeparator()
 
-    # def list_all_available_bsheet(self, prefix):
-    #     check_table_exists_query = get_all_table_by_prefix(prefix)
-    #     Tables, self.print_message = read_query(self.rk_db, check_table_exists_query)
-    #     bsheetList = []
-    #
-    #     for t in Tables:
-    #         bsheetList.append(t[0])
-    #     return bsheetList
+    def user_admin(self):
+        pass
 
-    def gui_switching(self):
-        gui_switch = hospital_to_medical(self.bsheet_hospital, self.bsheet_medical)
-        if gui_switch.exec_() == gui_switch.Accepted:
-            hospital_key, medical_key = gui_switch.get_inp()
-            # print(hospital_key, medical_key)
-            # if hospital_key:
-            #     print("Hospital")
-            # if medical_key:
-            #     print("Medical")
-            parameter_conn = mysql_table_crud(db_table=PARAMETER_VALUES,
-                                              db_header=PARAMETER_VALUES_HEADER,
-                                              **self.db_cfg)
-            medical_key = int(medical_key)
-            medical_id = f" parameter_name = 'medical_gui'"
-            medical_reset = f"check_condition='{medical_key}'"
-
-            hospital_key = int(hospital_key)
-            hospital_id = f" parameter_name = 'hospital_gui'"
-            hospital_reset = f"check_condition='{hospital_key}'"
-
-            # print("M:",medical_key,"H:",hospital_key)
-            messge1 = parameter_conn.update_rows_by_column_values(set_argument=medical_reset, criteria=medical_id)
-            messge2 = parameter_conn.update_rows_by_column_values(set_argument=hospital_reset, criteria=hospital_id)
-            # print(messge1)
-            # print(messge2)
-            self.restart()
+    def mysql_login_info0(self):
+        pass
 
     def department_modify_setting(self):
-        from collections import OrderedDict
-
-        def get_get_departments_available():
-            query = "SELECT * FROM %s" % MYSQL_DB_HOSPITAL_DEPT_PAYIN
-            payin_depts = mysql_table_crud(db_table=HOSPITAL_BILL_PAYIN_PREFIX,
-                                           db_header=PAYIN_TABLE_HEADER,
-                                           **self.db_cfg)
-
-            return
-
-        def add_departments_to_list(dept_list):
-            data = []
-            itm = OrderedDict()
-            for val in dept_list:
-                itm.setdefault(val, True, False)
-                data.append(itm)
-            query = f"insert into {MYSQL_DB_HOSPITAL_DEPT_PAYIN} (department_name,display,db_fixed) values ({data});"
-            print(data)
-
-        def remove_departments_from_list(dept_list):
-            data = []
-            itm = OrderedDict()
-            for val in dept_list:
-                itm.setdefault(val, True, False)
-                data.append(itm)
-            query = f"insert into {MYSQL_DB_HOSPITAL_DEPT_PAYIN} (department_name,display,db_fixed) values ({data});"
-
-        def update_departments_from_list(dept_list):
-            data = []
-            itm = OrderedDict()
-            for val in dept_list:
-                itm.setdefault(val, True, False)
-                data.append(itm)
-            query = f"insert into {MYSQL_DB_HOSPITAL_DEPT_PAYIN} (department_name,display,db_fixed) values ({data});"
-
-        payin_depts = mysql_table_crud(db_table=HOSPITAL_BILL_PAYIN_PREFIX,
-                                       db_header=PAYIN_TABLE_HEADER,
-                                       **self.db_cfg)
-
-        listed_dept = get_get_departments_available()
-        # listed_dept=[list(item.values())[0] for item in listed_dept]
-        print("Listed:", listed_dept)
-
-        # dept_list = make_nested_dict()
-        depts = payin_depts.get_departments_in_db(order=f"order by department asc")
-        dept_list = []
-        dept_list = [list(item.values())[0] for item in depts]
-
-        # PAYIN_DEPARTMENT =
-        # user_list = login_conn.read_row_by_column_values(column_name="user_name", order="order by user_name asc")
-        print(dept_list)
-
-        setting_inp = dynamic_list_editor("Description", proList=dept_list)
-        if setting_inp.exec_() == setting_inp.Accepted:
-            department_list = setting_inp.get_inp()
-            print(department_list)
-
-        # def get_department_in_db():
-        #     query = f"SELECT distinct department FROM {RECEPTION_BILL_PAYIN_PREFIX} ;"
-        #     data, message = read_query(rk_db, query)
-        #     dept_list = make_nested_dict()
-        #     for name in data:
-        #         dept_list[name[0]] = name[0]
-        #     return dept_list
-
-        # https: // stackoverflow.com / questions / 14731207 / inserting - multiple - dictionary - objects - into - a - mysql - database - using - python - and -mys
-
-        # dept_list = get_department_in_db()
-        # asd = add_department_list(dept_list)
-        #
-        # print(PAYIN_DEPARTMENT)
-        # print(dept_list)
-        #
-        # # query = f"update {RECEPTION_BILL_PAYIN_PREFIX} SET department='Admission' where department='Admision';"
-        # # message = execute_query(self.rk_db, query)
-        # # print(message)
+        pass
 
     def restart(self):
         QCoreApplication.quit()
@@ -781,78 +625,7 @@ class MyMainWindow(QMainWindow):
 
     def refresh(self):
         pass
-        # # sqlite_db_path = f"Logging/{MYSQL_SQLITE_DB}"
-        # file_path = Path(LOG_FILE)
-        #
-        # try:
-        #     my_abs_path = file_path.resolve(strict=True)
-        # except FileNotFoundError:
-        #     pass
-        #     #logger.critical(f"Failed to locate {LOG_FILE}")
-        # else:
-        #     mbox0 = QMessageBox.question(self, "Clear log file ?",
-        #                                  "Are you sure to clear log file ?",
-        #                                  QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        #     if mbox0 == QMessageBox.Yes:
-        #         pass
-        #         # cleanLog=clearlogger()
-        #         #logger.critical(f"{LOG_FILE} cleaned")
-        #         # fh = logging.FileHandler('debug.log', "w")
-        #         # fh.setLevel(logging.DEBUG)
-        #         # fh.setFormatter(formatter)
-        #         # #logger.addHandler(fh)
-        #         # os.remove(LOG_FILE)
-        #         # try:
-        #         #     os.remove(LOG_FILE)
-        #         # except OSError:
-        #         #
-        #         #     #logger.info(f"failed to remove {LOG_FILE}")
-        #
-        #     else:
-        #         pass
-        #         #logger.info(f"{LOG_FILE} removal attempted")
 
-    def user_admin(self):
-        rk_db, self.print_message = mysql_table_crud(**self.db_cfg).db_connection()
-        new_user = add_new_user(rk_db)
-        # logger.info(f"adding a new user")
-        if new_user.exec_() == new_user.Accepted:
-            self.usr, self.pwd, self.tools = new_user.get_inp()
-            get_log = Sign(rk_db)
-            result = get_log.login(self.usr, self.pwd, self.tools)
-            # logger.info(f"{self.usr} added as  a new user")
-
-    def mysql_login_info0(self):
-        self.mysql_login_info(close_now=self.close_now)
-        return
-
-    def mysql_login_info(self, close_now=True):
-        mysql_login = update_mysql_login(self.mysql_hostname, self.mysql_dbname,
-                                         self.mysql_login, self.mysql_passwd, self.mysql_port)
-
-        # logger.info(f"updating mysql login ")
-        if mysql_login.exec_() == mysql_login.Accepted:
-            self.mysql_log = mysql_login.get_inp()
-
-            if "" not in self.mysql_log.values():
-                mysql_msg = self.mysql_log_data.update(self.mysql_log)
-                # logger.info(f"MYSQL login updated/registered..")
-                QMessageBox.information(self, "mysql login Registered",
-                                        "Updated the login...,\nPlease re-open to continue... ")
-                if close_now:
-                    self.quit_now()
-                else:
-                    return
-            else:
-                QMessageBox.information(self, "Information Missing",
-                                        "Inputs values missing,\nLogin information cannot be  empty ")
-                if close_now:
-                    self.quit_now()
-
-    def msg_info_db_read(self):
-        msg = TimerMessageBox(4, "DB Read", "Reading database ...")
-        # msg = QMessageBox.information(self, "Success !!!", "Database access complete..")
-        msg.exec_()
 
     def quit_now(self):
         # logger.info(f"Exiting the program..")
