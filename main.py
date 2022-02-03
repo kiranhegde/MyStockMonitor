@@ -10,10 +10,36 @@ from PyQt5.QtWidgets import QMessageBox, QAction, QFileDialog, QTabWidget \
 # import PyQt5.sip # required to function exe file
 import PyQt5.sip
 
-from utility.libnames import WELCOME
+from utility.libnames import WELCOME, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN
 from mysql_tools.mysql_crud import mysql_table_crud
+from sqlite3_database.sqlite3_crud import sqlite3_crud
+
 
 # PEP8 Reformat Code press Ctrl+Alt+L.
+
+class TimerMessageBox(QMessageBox):
+    def __init__(self, timeout=3, titles="Wait..", displayInfo="Please Wait...", parent=None):
+        super(TimerMessageBox, self).__init__(parent)
+        self.msg = displayInfo
+        self.ttl = titles
+        self.setWindowTitle(self.ttl)
+        self.time_to_wait = timeout
+        self.setText(f"{self.msg} \n wait (closing automatically in {timeout} seconds.)")
+        self.setStandardButtons(QMessageBox.NoButton)
+        self.timer = QTimer(self)
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.changeContent)
+        self.timer.start()
+
+    def changeContent(self):
+        self.setText(f"{self.msg} \n wait (closing automatically in {self.time_to_wait} seconds.)")
+        self.time_to_wait -= 1
+        if self.time_to_wait <= 0:
+            self.close()
+
+    def closeEvent(self, event):
+        self.timer.stop()
+        event.accept()
 
 
 class MyMainWindow(QMainWindow):
@@ -33,8 +59,8 @@ class MyMainWindow(QMainWindow):
         # self.showFullScreen()
 
     def UI(self):
-        # self.check_sqlite_db_info()
-        # self.extablish_db_connection()
+        self.check_sqlite_db_info()
+        self.extablish_db_connection()
         # self.check_db_tables_exists()
         # self.get_parameter_values()
 
@@ -52,6 +78,145 @@ class MyMainWindow(QMainWindow):
     # @mysql_db(DB_CFG)
     # def check_mysql(self):
     #     pass
+
+    def check_sqlite_db_info(self):
+        sqlite_db_path = f"Database/{MYSQL_SQLITE_DB}"
+        file_path = Path(sqlite_db_path)
+
+        try:
+            my_abs_path = file_path.resolve(strict=True)
+        except FileNotFoundError:
+            # # logger.critical("Failed to connect to MYSQL server")
+            # msg = TimerMessageBox(10, "Database file missing !!",
+            #                       f"{sqlite_db_path} missing ...\nExiting... ")
+            # msg.exec_()
+            # self.quit_now()
+
+            mbox0 = QMessageBox.question(self, "MySQL database login issue!",
+                                         "MYSQL login information table missing \nCreate new sql database ? ",
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            message = ""
+            if mbox0 == QMessageBox.Yes:
+                self.mysql_hostname = "localhost"
+                self.mysql_login = "kiran"
+                self.mysql_passwd = "mypassword"
+                self.mysql_dbname = "rk_hospital_new"
+                self.mysql_port = "3306"
+                # logger.warning(f"{self.mysql_dbname} MYSQL DB created ")
+                # message = mysql_table_crud(**cfg_db).create_database(dbname=self.mysql_dbname)
+                db = sqlite3_crud(filename=file_path, table=MYSQL_SQLITE_DB_LOGIN)
+                sql = db.mysql_login(MYSQL_SQLITE_DB_LOGIN)
+                db.sql_do(sql)
+                message = f"{file_path} created with table {MYSQL_SQLITE_DB_LOGIN}"
+                QMessageBox.information(self, "Database creation", message)
+            else:
+                # logger.warning(f"{self.mysql_dbname}  MYSQL DB required ")
+                QMessageBox.question(self, "Exiting !", "Provide sql database with login information...  ",
+                                     QMessageBox.Ok, QMessageBox.Ok)
+                self.quit_now()
+        else:
+            pass
+            # logger.info("Connected to MYSQL server")
+
+        # self.mysql_log_data = sqlite3_crud(filename=f"{my_abs_path}", table=MYSQL_SQLITE_DB_LOGIN)
+        # print(self.mysql_log_data.mysql_login())
+
+    def extablish_db_connection(self):
+        # logger.info("Connecting to MYSQL server")
+        sqlite_db_path = f"sqlite3_database/{MYSQL_SQLITE_DB}"
+        file_path = Path(sqlite_db_path)
+        # print('extablish_db_connection')
+
+        try:
+            my_abs_path = file_path.resolve(strict=True)
+        except FileNotFoundError:
+            # logger.critical("Failed to connect to MYSQL server")
+            msg = TimerMessageBox(10, "Database file missing !!",
+                                  f"{sqlite_db_path} missing ... \n {self.print_message} \nExiting... ")
+            msg.exec_()
+            self.quit_now()
+        else:
+            pass
+            # logger.info("Connected to MYSQL server")
+
+        self.mysql_log_data = sqlite3_crud(filename=f"{my_abs_path}", table=MYSQL_SQLITE_DB_LOGIN)
+        table_empty = self.mysql_log_data.check_table_empty(MYSQL_SQLITE_DB_LOGIN)
+
+        if table_empty == 0:
+            mbox0 = QMessageBox.question(self, "MYSQL login issue !! ",
+                                         "MYSQL login table empty ... \n Would you like to provide update login ? ",
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if mbox0 == QMessageBox.Yes:
+                self.mysql_hostname = "localhost"
+                self.mysql_login = "kiran"
+                self.mysql_passwd = "mypassword"
+                self.mysql_dbname = "rk_hospital_new"
+                self.mysql_port = "3306"
+                # logger.info("Getting MYSQL server info")
+                self.mysql_login_info(close_now=self.close_now)
+                self.quit_now()
+            else:
+                # logger.warning(f"{self.mysql_dbname}  MYSQL DB required ")
+                QMessageBox.question(self, "Exiting !",
+                                     "MYSQL login table empty...\nCannot login to server without credentials  ",
+                                     QMessageBox.Ok, QMessageBox.Ok)
+                self.quit_now()
+
+        else:
+            mysql_log = self.mysql_log_data.retrieve('1')
+            self.mysql_hostname = mysql_log['mysql_hostname']
+            self.mysql_login = mysql_log['mysql_login']
+            self.mysql_passwd = mysql_log['mysql_passwd']
+            self.mysql_dbname = mysql_log['mysql_dbname']
+            self.mysql_port = mysql_log['mysql_port']
+
+            self.db_cfg = dict(user=mysql_log['mysql_login'],
+                               passwd=mysql_log['mysql_passwd'],
+                               port=mysql_log['mysql_port'],
+                               host=mysql_log['mysql_hostname'],
+                               db=mysql_log['mysql_dbname'])
+
+            cfg_db = dict(user=mysql_log['mysql_login'],
+                          passwd=mysql_log['mysql_passwd'],
+                          port=mysql_log['mysql_port'],
+                          host=mysql_log['mysql_hostname'])
+
+            db_check, self.print_message = mysql_table_crud(**cfg_db).check_db_exists(self.mysql_dbname)
+
+            if not db_check:
+                # logger.warning("MYSQL DB missing..")
+                mbox0 = QMessageBox.question(self, "Database Missing !", "Create new database ? ",
+                                             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+                if mbox0 == QMessageBox.Yes:
+                    # logger.warning(f"{self.mysql_dbname} MYSQL DB created ")
+                    message = mysql_table_crud(**cfg_db).create_database(dbname=self.mysql_dbname)
+                    QMessageBox.information(self, "Database creation", message)
+                else:
+                    # logger.warning(f"{self.mysql_dbname}  MYSQL DB required ")
+                    QMessageBox.question(self, "Exiting !", "Provide Database connection and try again...  ",
+                                         QMessageBox.Ok, QMessageBox.Ok)
+                    self.quit_now()
+
+            connection, self.print_message = mysql_table_crud(**self.db_cfg).db_connection()
+            if not connection:
+                # logger.critical("Access denied !!  MYSQL server connection failed")
+                mbox0 = QMessageBox.question(self, "Access denied !! ",
+                                             "Failed to connect to server ... \n Would you like to provide updated login ? ",
+                                             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if mbox0 == QMessageBox.Yes:
+                    # logger.info("Getting MYSQL server info")
+                    self.mysql_login_info(close_now=self.close_now)
+                    self.quit_now()
+                else:
+                    # logger.critical("exiting !!  MYSQL server connection failed")
+                    msg = TimerMessageBox(10, "Access denied !!",
+                                          f"Failed to connect to server ... \n {self.print_message} \nExiting... ")
+                    msg.exec_()
+                    self.quit_now()
+
+
+
     def get_parameter_values(self):
 
         parameter_conn = mysql_table_crud(db_table=PARAMETER_VALUES,
@@ -108,7 +273,7 @@ class MyMainWindow(QMainWindow):
         # print(dept)
 
     def check_sqlite_db_info(self):
-        sqlite_db_path = f"Database/{MYSQL_SQLITE_DB}"
+        sqlite_db_path = f"sqlite3_database/{MYSQL_SQLITE_DB}"
         file_path = Path(sqlite_db_path)
 
         try:
@@ -128,7 +293,7 @@ class MyMainWindow(QMainWindow):
                 self.mysql_hostname = "localhost"
                 self.mysql_login = "kiran"
                 self.mysql_passwd = "mypassword"
-                self.mysql_dbname = "rk_hospital_new"
+                self.mysql_dbname = "stock_database"
                 self.mysql_port = "3306"
                 # logger.warning(f"{self.mysql_dbname} MYSQL DB created ")
                 # message = mysql_table_crud(**cfg_db).create_database(dbname=self.mysql_dbname)
@@ -151,7 +316,7 @@ class MyMainWindow(QMainWindow):
 
     def extablish_db_connection(self):
         # logger.info("Connecting to MYSQL server")
-        sqlite_db_path = f"Database/{MYSQL_SQLITE_DB}"
+        sqlite_db_path = f"sqlite3_database/{MYSQL_SQLITE_DB}"
         file_path = Path(sqlite_db_path)
         # print('extablish_db_connection')
 
@@ -166,7 +331,7 @@ class MyMainWindow(QMainWindow):
         else:
             pass
             # logger.info("Connected to MYSQL server")
-
+        print(f"{my_abs_path}")
         self.mysql_log_data = sqlite3_crud(filename=f"{my_abs_path}", table=MYSQL_SQLITE_DB_LOGIN)
         table_empty = self.mysql_log_data.check_table_empty(MYSQL_SQLITE_DB_LOGIN)
 
@@ -626,7 +791,6 @@ class MyMainWindow(QMainWindow):
     def refresh(self):
         pass
 
-
     def quit_now(self):
         # logger.info(f"Exiting the program..")
         sys.exit(0)
@@ -791,7 +955,7 @@ def main():
 
 def custom_excepthook(exc_type, exc_value, exc_traceback):
     # https: // stackoverflow.com / questions / 6234405 / logging - uncaught - exceptions - in -python
-    from Logging.my_logger import setup_log, clearlogger
+    from logging.my_logger import setup_log, clearlogger
     import traceback
 
     logging = setup_log()

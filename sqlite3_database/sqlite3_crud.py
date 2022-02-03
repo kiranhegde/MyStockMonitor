@@ -3,8 +3,9 @@ import sqlite3
 class sqlite3_crud:
     def __init__(self, **kwargs):
         self.filename = kwargs.get('filename')
-        self.table = kwargs.get('table', 'test')
+        self.table = kwargs.get('table','test')
         # self.my_abs_path=self.get_path()
+
 
     def sql_do(self, sql, *params):
         self._db.execute(sql, params)
@@ -30,3 +31,14 @@ class sqlite3_crud:
         cursor = self._db.execute('SELECT count(*) FROM(select 1 from {} limit 1)'.format(tname))
         val=list(dict(cursor.fetchone()).values())
         return val[0]
+
+    def mysql_login(self,tname):
+        sql = f'''CREATE TABLE IF NOT EXISTS {tname}(
+             id   int  NOT NULL,
+             mysql_login CHAR(60) NOT NULL,
+             mysql_passwd CHAR(60),
+             mysql_dbname CHAR(60),
+             mysql_hostname CHAR(60),
+             mysql_port INT NOT NULL
+          )'''
+        return sql
