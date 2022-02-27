@@ -1,11 +1,9 @@
 # mysql db info
 MYSQL_DB_NAME = "stock_database_new"
 TOTAL_HOLDINGS_DB_TABLE_NAME = "total_holdings_new"
-TOTAL_HOLDINGS_DB_TABLE_NAME_test = "total_holdings_test"
 CURRENT_HOLDINGS_DB_TABLE_NAME = "current_holdings"
 SOLD_HOLDINGS_DB_TABLE_NAME = "sold_out_holdings"
 BANK_TRANSACTIONS_DB_TABLE_NAME = "bank_transations"
-BANK_TRANSACTIONS_DB_TABLE_NAME_test = "bank_transations_test"
 DEFAULTS = "defaults_values"
 # TRANSACTION_FROM_DEMAT_ACCOUNT_TABLE="transation_from_demat"
 
@@ -20,47 +18,18 @@ TRADE_TYPE = ["Buy", "Sell"]
 # TOTAL_HOLDINGS_CALC_HEADER = TOTAL_HOLDINGS_DB_HEADER + TOTAL_HOLDINGS_EXTRA_HEADER
 
 # mysql table header names
-TOTAL_HOLDINGS_DB_HEADER = ['id', 'ref_number', 'date', 'type', 'agency', 'equity', 'quantity', 'price',
-                            'fees', 'avg_price', 'current_holding', 'remarks']
+TOTAL_HOLDINGS_DB_HEADER = ['id', 'ref_number', 'date', 'type','agency','equity', 'quantity', 'price',
+                            'fees', 'avg_price', 'current_holding','remarks']
 TOTAL_HOLDINGS_EXTRA_HEADER = ['transact_val', 'cashflow', 'prev_units', 'cml_units', 'prev_cost',
                                'cml_cost', 'gain_loss', 'yield']
 # cml- cummulative
 TOTAL_HOLDINGS_CALC_HEADER = TOTAL_HOLDINGS_DB_HEADER + TOTAL_HOLDINGS_EXTRA_HEADER
 
-TOTAL_HOLDINGS_HEADER_NAME = ["ID", "Reference", "Date", "Type", "Agency", "Equity", "Quantity", "Price", "Fees",
-                              "AvgPrice", 'CurrentHoldings', "Remarks", "TransactionValue", 'CashFlow', 'PrevUnits',
-                              'CummUnits', 'PrevCosts','CummCosts','GainLoss','Yield']
+
 
 
 CURRENT_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price', 'quantity',
                              'remarks']
-# Current holding headers
-CURRENT_HOLDINGS_HEADER = ["ID", "Reference", "Agency", "Exchange", "Equity", "Buy Date", "Avg. Price", "Quantity",
-                           "Remarks"]
-
-# Columns to be displayed in the gui
-CURRENT_HOLDING_LIST_DISPLAY = ['ref_number', 'equity', 'date', 'avg_price', 'quantity']
-# CURRENT_HOLDING_DB_TO_DISPLAY = dict(zip(CURRENT_HOLDING_DB_HEADER, CURRENT_HOLDINGS_HEADER))
-CURRENT_HOLDING_DB_TO_DISPLAY = dict(zip(TOTAL_HOLDINGS_CALC_HEADER, TOTAL_HOLDINGS_HEADER_NAME))
-
-# list of header name to be dropped
-CURRENT_HOLDINGS_HEADER_DROP_LIST = []
-for hdr_name in TOTAL_HOLDINGS_CALC_HEADER:
-    if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
-        CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
-
-# list of header name to be dropped
-CURRENT_HOLDINGS_HEADER_DROP_LIST = []
-for hdr_name in TOTAL_HOLDINGS_CALC_HEADER:
-    if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
-        CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
-
-# list of header name to be retained
-CURRENT_HOLDINGS_HEADER_DISPLAY_LIST = []
-for hdr_name in CURRENT_HOLDING_LIST_DISPLAY:
-    CURRENT_HOLDINGS_HEADER_DISPLAY_LIST.append(CURRENT_HOLDING_DB_TO_DISPLAY[hdr_name])
-
-
 SOLD_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'buy_price',
                           'sale_date', 'sale_price', 'sale_quantity', 'remarks']
 BANK_TRANSACTIONS_DB_HEADER = ['id', 'agency', 'transaction_date', 'transaction_id', 'amount', 'from_bank',
@@ -70,7 +39,23 @@ DEFAULTS_DB_HEADER = ['brokerage', 'gst', 'stt', 'itax']
 
 HOLDINGS_HEADER = ["ID", "Reference", "Buy Date", 'Type', "Agency", "Exchange", "Equity", "Quantity", "Avg. Price",
                    "Remarks"]
+# Current holding headers
+CURRENT_HOLDINGS_HEADER = ["ID", "Reference", "Agency", "Exchange", "Equity", "Buy Date", "Avg. Price", "Quantity",
+                           "Remarks"]
+# Columns to be displayed in the gui
+CURRENT_HOLDING_LIST_DISPLAY = ['ref_number', 'equity', 'buy_date', 'avg_price', 'quantity']
+CURRENT_HOLDING_DB_TO_DISPLAY = dict(zip(CURRENT_HOLDING_DB_HEADER, CURRENT_HOLDINGS_HEADER))
 
+# list of header name to be dropped
+CURRENT_HOLDINGS_HEADER_DROP_LIST = []
+for hdr_name in CURRENT_HOLDING_DB_HEADER:
+    if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
+        CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
+
+# list of header name to be retained
+CURRENT_HOLDINGS_HEADER_DISPLAY_LIST = []
+for hdr_name in CURRENT_HOLDING_LIST_DISPLAY:
+    CURRENT_HOLDINGS_HEADER_DISPLAY_LIST.append(CURRENT_HOLDING_DB_TO_DISPLAY[hdr_name])
 
 # print(CURRENT_HOLDINGS_HEADER_DROP_LIST)
 # print(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST)
@@ -158,7 +143,6 @@ def create_all_holdings_table_db_query_old(tablename):
               ) ;
               """ % tablename
     return create_current_holdings_table
-
 
 # id', 'ref_number', 'date', 'type','agency','equity', 'quantity', 'price',
 #                             'fees', 'avg_price', 'current_holding','remarks'

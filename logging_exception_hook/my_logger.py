@@ -7,7 +7,7 @@ def getlogger1():
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     # create console handler and set level to debug
-    #ch = logging.StreamHandler()
+    #ch = logging_exception_hook.StreamHandler()
     ch = logging.FileHandler(LOG_FILE)
     ch.setLevel(logging.DEBUG)
     # create formatter
@@ -43,11 +43,11 @@ def setup_log():
     fh.setLevel(logging.DEBUG)
 
     # create console handler with a higher log level
-    # ch = logging.StreamHandler()
-    # ch.setLevel(logging.WARNING)
+    # ch = logging_exception_hook.StreamHandler()
+    # ch.setLevel(logging_exception_hook.WARNING)
 
     # create formatter and add it to the handlers
-    # fhFormatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    # fhFormatter = logging_exception_hook.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     fhFormatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - Line: %(lineno)d - %(message)s')
     chFormatter = logging.Formatter('%(levelname)s - %(filename)s - Line: %(lineno)d - %(message)s')
     fh.setFormatter(fhFormatter)
