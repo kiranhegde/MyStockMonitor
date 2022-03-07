@@ -9,8 +9,10 @@ import pandas as pd
 from collections import defaultdict
 
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME,  \
-    SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
+from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME,\
+    TOTAL_HOLDINGS_DB_TABLE_NAME,TOTAL_HOLDINGS_DB_HEADER, \
+    SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME,\
+    BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
 
 from utility.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS\
     ,PATH_TO_DATABASE_SOLD_HOLDINGS
@@ -97,24 +99,20 @@ def parse_str(s):
 
 
 def gen_id(**db_cfg):
-    holdings_details = mysql_table_crud(db_table=CURRENT_HOLDINGS_DB_TABLE_NAME,
-                                        db_header=CURRENT_HOLDING_DB_HEADER,
-                                        **db_cfg)
-    sold_stocks_details = mysql_table_crud(db_table=SOLD_HOLDINGS_DB_TABLE_NAME,
-                                           db_header=SOLD_HOLDING_DB_HEADER,
-                                           **db_cfg)
 
     transctions_details = mysql_table_crud(db_table=BANK_TRANSACTIONS_DB_TABLE_NAME,
-                                           db_header=BANK_TRANSACTIONS_DB_HEADER,
-                                           **db_cfg)
+                                                db_header=BANK_TRANSACTIONS_DB_HEADER,
+                                                **db_cfg)
+
+    total_holdings_details = mysql_table_crud(db_table=TOTAL_HOLDINGS_DB_TABLE_NAME,
+                                                   db_header=TOTAL_HOLDINGS_DB_HEADER,
+                                                   **db_cfg)
+
     id_list = []
-    hold_table = holdings_details.read_row_by_column_values(column_name='ref_number')
-    sale_table = sold_stocks_details.read_row_by_column_values(column_name='ref_number')
+    all_holdings_table = total_holdings_details.read_row_by_column_values(column_name='ref_number')
     cash_table = transctions_details.read_row_by_column_values(column_name='id')
 
-    for itm in hold_table:
-        id_list.append(itm['ref_number'])
-    for itm in sale_table:
+    for itm in all_holdings_table:
         id_list.append(itm['ref_number'])
     for itm in cash_table:
         id_list.append(itm['id'])

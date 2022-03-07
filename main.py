@@ -29,8 +29,7 @@ from utility.utility_functions import make_nested_dict, date_time_day_start_end
 from mysql_tools.mysql_crud import mysql_table_crud
 from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, create_current_holdings_table_db_query, \
     create_transaction_table_db_query, create_sold_holdings_table_db_query, create_all_holdings_table_db_query, \
-    CURRENT_HOLDING_DB_HEADER, SOLD_HOLDING_DB_HEADER, BANK_TRANSACTIONS_DB_HEADER, TRADE_TYPE, \
-    DEFAULTS_DB_HEADER, CURRENT_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, \
+    BANK_TRANSACTIONS_DB_HEADER,  SOLD_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, \
     BANK_TRANSACTIONS_DB_TABLE_NAME, DEFAULTS_DB_HEADER, SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, \
     TOTAL_HOLDINGS_DB_HEADER, TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_CALC_HEADER, TOTAL_HOLDINGS_EXTRA_HEADER, \
     CURRENT_HOLDING_LIST_DISPLAY, CURRENT_HOLDING_DB_TO_DISPLAY, BANK_TRANSACTIONS_LIST_DISPLAY, \
@@ -157,18 +156,7 @@ class MyMainWindow(QMainWindow):
         # self.get_column_value_count()
         self.widgets()
 
-    # @mysql_db(DB_CFG)
-    # def check_mysql(self):
-    #     pass
-
-
     def connect_to_db_tables(self):
-        # self.current_holdings_details_db = mysql_table_crud(db_table=CURRENT_HOLDINGS_DB_TABLE_NAME,
-        #                                                     db_header=CURRENT_HOLDING_DB_HEADER,
-        #                                                     **self.db_cfg)
-        # self.sold_stocks_details_db = mysql_table_crud(db_table=SOLD_HOLDINGS_DB_TABLE_NAME,
-        #                                                db_header=SOLD_HOLDING_DB_HEADER,
-        #                                                **self.db_cfg)
 
         self.transctions_details = mysql_table_crud(db_table=BANK_TRANSACTIONS_DB_TABLE_NAME,
                                                     db_header=BANK_TRANSACTIONS_DB_HEADER,
@@ -263,41 +251,7 @@ class MyMainWindow(QMainWindow):
         # # tar.add(source)
         # # tar.close()
 
-    def get_all_holdings_info(self):
-        data = self.total_holdings_details.read_row_by_column_values(order="order by date asc")
-        all_holding_df = pd.DataFrame(data)
-        all_holding_df.sort_values(by=['equity'], ascending=True, inplace=True)
-        ticker_list = all_holding_df['equity'].to_list()
-        ticker_list = sorted(list(set(ticker_list)))
 
-        for hdr in TOTAL_HOLDINGS_CALC_HEADER:
-            if hdr not in all_holding_df.columns.to_list():
-                all_holding_df[hdr] = 0.0
-
-        i = 0
-        for ticker in ticker_list:
-            i += 1
-            mask = all_holding_df['equity'] == ticker
-            calc_df = self.calc_overall_trading_summary(all_holding_df[mask].copy())
-            # print(calc_df.to_string())
-
-            for idx, row in calc_df.iterrows():
-                mask_row = all_holding_df['ref_number'] == row['ref_number']
-                for col in TOTAL_HOLDINGS_EXTRA_HEADER:
-                    all_holding_df.loc[mask_row, col] = row[col]
-
-        all_holding_df.sort_values(by=['date'], ascending=True, inplace=True)
-        # drop_columns = ['id', 'remarks', 'ref_number', 'agency']
-        drop_columns = ['id', 'remarks','agency']
-        all_holding_df.drop(drop_columns, axis=1, inplace=True)
-        all_holding_df['cml_gain_loss'] = all_holding_df['gain_loss'].cumsum()
-
-        # print(all_holding_df.head(10).to_string())
-
-        # if i == 3:
-        # exit()
-
-        return all_holding_df
 
     def export_all_holdings_to_excel(self, all_holding_df):
 
@@ -314,183 +268,6 @@ class MyMainWindow(QMainWindow):
         # all_holding_df.to_excel(writer, sheet_name="dataframe", index=False)
         all_holding_df.to_excel(writer, index=False)
         writer.save()
-
-    def calc_overall_trading_summary(self, df):
-        df = df.sort_values(by=['date'], ascending=True).copy()
-        # print(df.to_string())
-        df.loc[:, 'transact_val'] = df.loc[:, 'quantity'] * df.loc[:, 'price']
-        value_list = {'quantity': 0, 'cml_units': 0, 'prev_cost': 0, 'transact_val': 0, 'cml_cost': 0, 'avg_price': 0}
-        i = 0
-        for idx, row in df.iterrows():
-            date = row['date']
-            type = row['type']
-            quantity = row['quantity']
-            transact_val = row['transact_val']
-            avg_price = row['avg_price']
-            price = row['price']
-            prev_units = row['quantity']
-            cml_units = row['cml_units']
-            prev_cost = row['prev_cost']
-
-            if i == 0:
-                df.loc[idx, ('prev_units')] = 0
-                df.loc[idx, ('cml_units')] = quantity
-
-                value_list['prev_units'] = 0
-                value_list['cml_units'] = quantity
-                value_list['prev_cost'] = 0
-
-                df.loc[idx, ('cml_cost')] = transact_val
-                df.loc[idx, ('prev_cost')] = 0
-                if type == "Buy":
-                    df.loc[idx, ('cashflow')] = -transact_val
-                if type == "Sale":
-                    df.loc[idx, ('cashflow')] = transact_val
-
-                value_list['quantity'] = quantity
-                value_list['transact_val'] = transact_val
-                value_list['cml_cost'] = transact_val
-                value_list['avg_price'] = avg_price
-                value_list['prev_cost'] = 0
-
-            else:
-                prev_unit_new = value_list['quantity']
-                value_list['prev_units'] = prev_unit_new
-                value_list['quantity'] = prev_unit_new - quantity
-                df.loc[idx, ('prev_units')] = prev_unit_new
-
-                # print(value_list)
-                if type == "Buy":
-                    cml_units_new = value_list['cml_units'] + quantity
-                    prev_cost_new = value_list['avg_price'] * prev_unit_new
-                    cml_cost_new = avg_price * cml_units_new
-
-                    value_list['cml_units'] = cml_units_new
-                    value_list['prev_cost'] = prev_cost_new
-                    value_list['cml_units'] = cml_units_new
-
-                    df.loc[idx, ('cashflow')] = -transact_val
-                    df.loc[idx, ('cml_units')] = cml_units_new
-                    df.loc[idx, ('prev_cost')] = prev_cost_new
-                    df.loc[idx, ('cml_cost')] = cml_cost_new
-
-                    # -------------------------------------------
-                    value_list['quantity'] = prev_unit_new + quantity
-                    value_list['avg_price'] = avg_price
-
-                if type == "Sell":
-                    cml_units_new = value_list['cml_units'] - quantity
-                    prev_cost_new = value_list['avg_price'] * prev_unit_new
-                    cml_cost_new = avg_price * cml_units_new
-
-                    value_list['cml_units'] = cml_units_new
-                    value_list['prev_cost'] = prev_cost_new
-                    value_list['cml_units'] = cml_units_new
-
-                    df.loc[idx, ('cashflow')] = transact_val
-                    df.loc[idx, ('cml_units')] = cml_units_new
-                    df.loc[idx, ('prev_cost')] = prev_cost_new
-                    df.loc[idx, ('cml_cost')] = cml_cost_new
-                    df.loc[idx, ('gain_loss')] = quantity * (price - avg_price)
-                    df.loc[idx, ('yield')] = price / avg_price - 1.0
-
-                    # -------------------------------------------
-                    value_list['quantity'] = prev_unit_new - quantity
-                    value_list['avg_price'] = avg_price
-            i += 1
-        # print("-------->")
-        # print(df.to_string())
-        # exit()
-        return df
-
-    def export_all_holdings_to_db(self):
-        # print(self.sold_holding_history.keys())
-        total_holdings_df = pd.DataFrame(columns=TOTAL_HOLDINGS_DB_HEADER)
-        print(total_holdings_df.to_string())
-        holding_history = make_nested_dict()
-        for key in TOTAL_HOLDINGS_DB_HEADER:
-            holding_history[key] = None
-        # print(holding_history)
-        # ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'buy_price',
-        # 'sale_date', 'sale_price', 'sale_quantity', 'remarks']
-
-        data = self.sold_stocks_details_db.read_row_by_column_values(order="order by equity asc")
-        sold_holding_df = pd.DataFrame(data)
-        for index, row in sold_holding_df.iterrows():
-            holding_history['id'] = 0
-            holding_history['ref_number'] = gen_id(**self.db_cfg)
-            holding_history['date'] = row['buy_date']
-            holding_history['type'] = TRADE_TYPE[0]
-            holding_history['agency'] = row["agency"]
-            # holding_history['exchange'] = row["exchange"]
-            holding_history['equity'] = row["equity"]
-            holding_history['quantity'] = row["sale_quantity"]
-            holding_history['price'] = row["buy_price"]
-            holding_history['fees'] = 0
-            holding_history['avg_price'] = row["buy_price"]
-            holding_history['current_holding'] = False
-            holding_history['remarks'] = TRADE_TYPE[0]
-            buy_df = pd.DataFrame([holding_history])
-            total_holdings_df = pd.concat([buy_df, total_holdings_df]).reset_index(drop=True)
-
-            holding_history['id'] = 0
-            holding_history['ref_number'] = gen_id(**self.db_cfg)
-            holding_history['date'] = row['sale_date']
-            holding_history['type'] = TRADE_TYPE[1]
-            holding_history['agency'] = row["agency"]
-            # holding_history['exchange'] = row["exchange"]
-            holding_history['equity'] = row["equity"]
-            holding_history['quantity'] = row["sale_quantity"]
-            holding_history['price'] = row["sale_price"]
-            holding_history['fees'] = 0
-            holding_history['avg_price'] = row["buy_price"]
-            holding_history['current_holding'] = False
-            holding_history['remarks'] = TRADE_TYPE[1]
-            sell_df = pd.DataFrame([holding_history])
-            total_holdings_df = pd.concat([sell_df, total_holdings_df]).reset_index(drop=True)
-
-        total_holdings_df.sort_values(by=['date'], ascending=True, inplace=True)
-        # ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price', 'quantity',
-        #  'remarks']
-        data_current = self.current_holdings_details_db.read_row_by_column_values(order="order by equity asc")
-        current_holding_df = pd.DataFrame(data_current)
-        for index, row in current_holding_df.iterrows():
-            holding_history['id'] = 0
-            holding_history['ref_number'] = gen_id(**self.db_cfg)
-            holding_history['date'] = row['buy_date']
-            holding_history['type'] = TRADE_TYPE[0]
-            holding_history['agency'] = row["agency"]
-            # holding_history['exchange'] = row["exchange"]
-            holding_history['equity'] = row["equity"]
-            holding_history['quantity'] = row["quantity"]
-            holding_history['price'] = row["avg_price"]
-            holding_history['fees'] = 0
-            holding_history['avg_price'] = row["avg_price"]
-            holding_history['current_holding'] = True
-            holding_history['remarks'] = TRADE_TYPE[0]
-            buy_df = pd.DataFrame([holding_history])
-            total_holdings_df = pd.concat([buy_df, total_holdings_df]).reset_index(drop=True)
-
-        total_holdings_df.sort_values(by=['date'], ascending=True, inplace=True)
-        print(total_holdings_df.to_string())
-
-        # writing to database
-        for indx, row in total_holdings_df.iterrows():
-            row = row.to_dict()
-            listt = list(row.values())
-            vals_tuple = [tuple(listt)]
-            messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
-            print(messge)
-
-        exit()
-
-        # for symb, hist_df in self.sold_holding_history.items():
-        #     symbol, start_date, end_date = date_symbol_split(symb)
-        #     print(symbol, start_date, end_date)
-        #     print(hist_df.head().to_string())
-        #     exit()
-
-
 
     def create_sold_holdings_csv_file_names(self, df):
         # self.sold_holdings_csv_file_names=make_nested_dict()
@@ -810,98 +587,6 @@ class MyMainWindow(QMainWindow):
 
         return Tmodel, Tview
 
-    def update_database_from_csv(self):
-        # 1. current
-        # 2. sold
-        # 3. transactions
-
-        key = 2
-        if key == 1:
-            # read holdings
-            # path_to_holdings = os.path.join(cwd, PATH_TO_DATABASE, 'purchase.csv')
-            path_to_holdings = os.path.join(PDIR, PATH_TO_DATABASE_CURRENT_HOLDINGS, 'purchase_00.xlsx')
-            # holding_df = pd.read_csv(path_to_holdings, parse_dates=['trade_date'])
-            holding_df = pd.read_excel(path_to_holdings)
-            # print(holding_df.head().to_string())
-            # print(type(holding_df))
-            mask1 = holding_df['agency'] == 'Kotak'
-            mask2 = holding_df['agency'] == 'Zerodha'
-            holding_df = holding_df[mask1 | mask2].copy()
-            # exit()
-            # print(holding_df.to_string())
-            # holding_df.trade_date = holding_df.trade_date.apply(lambda x: dateutil.parser.parse(x, dayfirst=True))
-
-            # holding_df = pd.read_csv(path_to_holdings)
-            col_to_remove = ['settle_date', 'unit_brockerage', 'gst_brockerage', 'stt',
-                             'income_tax']
-            holding_df['remarks'] = None
-            holding_df.drop(col_to_remove, axis=1, inplace=True)
-            # print(holding_df.head(5).to_string())
-            # holding_df['trade_date'] = pd.to_datetime(holding_df['trade_date'], infer_datetime_format=True)
-            # print(holding_df.head(5).to_string())
-            # holding_df['trade_date'] = holding_df['trade_date'].dt.strftime(DATE_FMT_YMD)
-
-            holding_df.sort_values(by=['trade_date'], ascending=True, inplace=True)
-            # print(holding_df.to_string())
-            #
-            holding_df.reset_index(inplace=True)
-            holding_df.columns = CURRENT_HOLDING_DB_HEADER
-            print(holding_df.head(10).to_string())
-            print(holding_df.info())
-            holding_df.reset_index(drop=True, inplace=True)
-            self.call_import_csv_to_mysql(csv_to_df=holding_df, table_name=CURRENT_HOLDINGS_DB_TABLE_NAME,
-                                          csv_data=True)
-        elif key == 2:
-            # read sold stoks
-            # path_to_sold_stock = os.path.join(cwd, PATH_TO_DATABASE, 'sale.csv')
-            # sold_holding_df = pd.read_csv(path_to_sold_stock, parse_dates=['buy_date', 'trade_date'])
-            # sold_holding_df['buy_date'] = sold_holding_df['buy_date'].dt.strftime(DATE_FMT_YDM)
-            # # sold_holding_df['buy_date'] = pd.to_datetime(sold_holding_df['buy_date'])
-            # sold_holding_df['trade_date'] = sold_holding_df['trade_date'].dt.strftime(DATE_FMT_YDM)
-            # # sold_holding_df['trade_date'] = pd.to_datetime(sold_holding_df['trade_date'])
-
-            path_to_sold_stock = os.path.join(PDIR, PATH_TO_DATABASE_SOLD_HOLDINGS, 'sale_00.xlsx')
-            # holding_df = pd.read_csv(path_to_holdings, parse_dates=['trade_date'])
-            sold_holding_df = pd.read_excel(path_to_sold_stock)
-            mask1 = sold_holding_df['agency'] == 'Kotak'
-            mask2 = sold_holding_df['agency'] == 'Zerodha'
-            sold_holding_df = sold_holding_df[mask1 | mask2].copy()
-
-            col_to_remove = ['settle_date', 'brokerage', 'gst', 'stt', 'itax']
-            sold_holding_df.drop(col_to_remove, axis=1, inplace=True)
-            sold_holding_df.sort_values(by=['buy_date'], ascending=True, inplace=True)
-            sold_holding_df['remarks'] = None
-            sold_holding_df.reset_index(inplace=True)
-            sold_holding_df.columns = SOLD_HOLDING_DB_HEADER
-            print(sold_holding_df.head(10).to_string())
-            print(sold_holding_df.info())
-            sold_holding_df.reset_index(drop=True, inplace=True)
-            self.call_import_csv_to_mysql(csv_to_df=sold_holding_df, table_name=SOLD_HOLDINGS_DB_TABLE_NAME,
-                                          csv_data=True)
-        elif key == 3:
-            # read transactions
-            # path_to_sold_trans = os.path.join(cwd, PATH_TO_DATABASE, 'investment.csv')
-            # transactions_df = pd.read_csv(path_to_sold_trans, parse_dates=['tr_date'])
-            # transactions_df['tr_date'] = transactions_df['tr_date'].dt.strftime(DATE_FMT_YDM)
-            # # transactions_df['tr_date'] = pd.to_datetime(transactions_df['tr_date'])
-            path_to_sold_trans = os.path.join(PDIR, PATH_TO_DATABASE_CURRENT_HOLDINGS, 'investment_00.xlsx')
-            # holding_df = pd.read_csv(path_to_holdings, parse_dates=['trade_date'])
-            transactions_df = pd.read_excel(path_to_sold_trans)
-            mask1 = transactions_df['agency'] == 'Kotak'
-            mask2 = transactions_df['agency'] == 'Zerodha'
-            transactions_df = transactions_df[mask1 | mask2].copy()
-
-            # transactions_df.sort_values(by=['tr_date'], ascending=True, inplace=True)
-            transactions_df['remarks'] = None
-            transactions_df.columns = BANK_TRANSACTIONS_DB_HEADER
-            print(transactions_df.to_string())
-            print(transactions_df.info())
-            transactions_df.reset_index(drop=True, inplace=True)
-            self.call_import_csv_to_mysql(csv_to_df=transactions_df, table_name=BANK_TRANSACTIONS_DB_TABLE_NAME,
-                                          csv_data=True)
-        else:
-            print("Unknown excel to MYSQL")
-        # self.csv_to_df
 
     def check_sqlite_db_info(self):
         sqlite_db_path = f"sqlite3_database/{MYSQL_SQLITE_DB}"
@@ -1039,28 +724,6 @@ class MyMainWindow(QMainWindow):
                     msg.exec_()
                     self.quit_now()
 
-    def get_parameter_values(self):
-        parameter_conn = mysql_table_crud(db_table=PARAMETER_VALUES,
-                                          db_header=PARAMETER_VALUES_HEADER,
-                                          **self.db_cfg)
-
-        para = parameter_conn.read_row_by_column_values(column_name="*")
-        para_df = pd.DataFrame(para)
-
-        if len(para_df) == 0:
-            # https: // blog.softhints.com / insert - multiple - rows - at - once -with-python - and -mysql /
-            initial_values = [(0, 'medical_gui', 1),
-                              (0, 'hospital_gui', 0)
-                              ]
-            messge = parameter_conn.insert_row_by_column_values(row_val=initial_values)
-            para = parameter_conn.read_row_by_column_values(column_name="*")
-            para_df = pd.DataFrame(para)
-
-        para_df.drop(['id'], axis=1, inplace=True)
-        mask1 = para_df['parameter_name'] == 'medical_gui'
-        mask2 = para_df['parameter_name'] == 'hospital_gui'
-        self.bsheet_medical = bool(para_df.loc[mask1, ['check_condition']].values[0][0])
-        self.bsheet_hospital = bool(para_df.loc[mask2, ['check_condition']].values[0][0])
 
     def update_window_title(self, usr):
         if self.bsheet_medical:
@@ -1213,27 +876,13 @@ class MyMainWindow(QMainWindow):
         #     holdings_returns_display(self.market_value_history, self.transactions_df, self.overall_holdings,
         #                          self.plot_all_returns_history, **self.db_cfg), title)
     def update_stock_history(self):
-        # import yfinance as yf
-        # print("not implemented")
-        title = "Unpaid Accounts"
         self.backup_folder(src_path=PATH_TO_DATABASE_CURRENT_HOLDINGS, trg_path=PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP)
-        # self.backup_folder(src_path=PATH_TO_DATABASE_SOLD_HOLDINGS, trg_path=PATH_TO_DATABASE_SOLD_HOLDINGS_BKP)
+        data = self.total_holdings_details.read_row_by_column_values()
+        df = pd.DataFrame(data)
+        mask = df["current_holding"] == True
+        symbol_df = df.loc[mask].copy()
+        # symbol_df =df[mask]
 
-        # current_stock = mysql_table_crud(db_table=CURRENT_HOLDINGS_DB_TABLE_NAME,
-        #                                  db_header=CURRENT_HOLDING_DB_HEADER,
-        #                                  **self.db_cfg)
-        # data = current_stock.read_row_by_column_values()
-        # print(current_stock.table_view(data))
-        # print(data['equity'])
-        cwd = os.getcwd()
-        # start_date = datetime(2019, 1, 1)
-        # end_date = datetime(2022, 1, 4)
-        # data = yf.download('DMART.NS', start=start_date, end=end_date)
-        mask = self.overall_holdings["current_holding"] == True
-        symbol_df = self.overall_holdings[mask]
-
-        # print(symbol_df["equity"].to_list())
-        # for symbol in symbol_df["equity"].to_list():
         symbol_list = []
         f_count = 0
         for index, row in symbol_df.iterrows():
@@ -1241,13 +890,13 @@ class MyMainWindow(QMainWindow):
             buy_date =row['date']
             symbol_buy_date=symbol_date_string(symbol,buy_date)
             # print(row.to_dict())
-            path_to_csv_file = os.path.join(cwd, PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol_buy_date}_history.csv")
+            path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol_buy_date}_history.csv")
             if os.path.isfile(path_to_csv_file):
                 f_count += 1
                 print(path_to_csv_file, 'exists..')
             else:
                 symbol_ns = f"{symbol}.NS"
-                data = yf.download(symbol_ns)
+                data = yf.download(symbol_ns,threads=True)
                 print(symbol, path_to_csv_file)
                 data.to_csv(path_to_csv_file)
                 symbol_list.append(symbol)
@@ -1331,36 +980,6 @@ class MyMainWindow(QMainWindow):
 
         print(f_count, "files are available")
 
-    def load_by_date_time(self):
-        self.usr_show = ""
-        self.by_user = True
-        # print(self.user_list)
-        # print("Displayed:",self.tabs_displayed)
-        bsheet_inp = select_bsheet(self.tabs_displayed.keys(), self.usr, self.user_list)
-        self.tabs_selected.clear()
-        if bsheet_inp.exec_() == bsheet_inp.Accepted:
-            start_time, end_time, self.usr_show, self.deptmt, self.receiptPayMethod, self.payDetail, self.search_options = bsheet_inp.get_inp()
-            title = BSHEET_TITLE
-            # if self.usr_show == self.usr:
-            #     pass
-            # else:
-            if self.deptmt == "All":
-                title = f" {title} ({self.usr_show})"
-            else:
-                title = f" {title}_{self.deptmt}({self.usr_show})"
-            # print(title)
-            # print("}}}}}",start_time, end_time)
-            # if [start_time, end_time] not in  self.tabs_displayed.values():
-            if title not in self.tabs_displayed.keys():
-                # self.bsheet_count=self.bsheet_count+1
-                # title=BSHEET_TITLE #+str(self.bsheet_count)
-
-                # https: // stackoverflow.com / questions / 373370 / how - do - i - get - the - utc - time - of - midnight -for -a - given - timezone
-                # start_time=datetime.datetime.strptime(start_time,"%d-%m-%Y %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
-                # end_time=datetime.datetime.strptime(end_time,"%d-%m-%Y %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
-                self.tabs_selected[title] = [start_time, end_time]
-                # print("--->", self.tabs_selected)
-                self.load_selected_tabs(check=False)
 
     def toolBarMenu(self):
         menubar = self.menuBar()
@@ -1469,12 +1088,12 @@ class MyMainWindow(QMainWindow):
         # tb.addAction(delShare)
         # tb.addSeparator()
 
-        load_sheet = QAction(QIcon("icons/docu.png"), "Load ", self)
-        load_sheet.triggered.connect(self.load_by_date_time)
-        load_sheet.setStatusTip("Load Old Balance Sheet")
-        load_sheet.setToolTip("Load Old Balance Sheet ")
-        tb.addAction(load_sheet)
-        tb.addSeparator()
+        # load_sheet = QAction(QIcon("icons/docu.png"), "Load ", self)
+        # load_sheet.triggered.connect(self.load_by_date_time)
+        # load_sheet.setStatusTip("Load Old Balance Sheet")
+        # load_sheet.setToolTip("Load Old Balance Sheet ")
+        # tb.addAction(load_sheet)
+        # tb.addSeparator()
 
         load_casesheet = QAction(QIcon("icons/download_internet.png"), "Update", self)
         load_casesheet.triggered.connect(self.update_stock_history)
@@ -1482,6 +1101,7 @@ class MyMainWindow(QMainWindow):
         load_casesheet.setToolTip("Update latest stock history ")
         tb.addAction(load_casesheet)
         tb.addSeparator()
+        # load_casesheet.setEnabled(False)
 
         # if self.my_access == "Write Only":
         #     statement_file.setEnabled(False)
@@ -1493,7 +1113,7 @@ class MyMainWindow(QMainWindow):
         tb.addAction(import_data)
         tb.addSeparator()
         # if self.my_access != "Administrator":
-        #     import_data.setEnabled(False)
+        import_data.setEnabled(False)
 
         export_data = QAction(QIcon("icons/document-export.png"), "Export", self)
         export_data.triggered.connect(self.export_mysql_csv)
@@ -1501,6 +1121,7 @@ class MyMainWindow(QMainWindow):
         export_data.setToolTip("Export data from CSV")
         tb.addAction(export_data)
         tb.addSeparator()
+        export_data.setEnabled(False)
         # if self.my_access != "Administrator":
         #     export_data.setEnabled(False)
 

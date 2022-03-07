@@ -16,13 +16,16 @@ from mysql_tools.mysql_crud import mysql_table_crud
 from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, create_current_holdings_table_db_query, \
     create_transaction_table_db_query, create_sold_holdings_table_db_query, create_all_holdings_table_db_query, \
     SOLD_HOLDING_DB_HEADER, BANK_TRANSACTIONS_DB_HEADER, TRADE_TYPE, \
-    CURRENT_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME,\
     BANK_TRANSACTIONS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER
+# CURRENT_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, \
 
 from mysql_tools.tables_and_headers import  TOTAL_HOLDINGS_DB_TABLE_NAME_test as  TOTAL_HOLDINGS_DB_TABLE_NAME
 from mysql_tools.tables_and_headers import  BANK_TRANSACTIONS_DB_TABLE_NAME_test as  BANK_TRANSACTIONS_DB_TABLE_NAME
 
 from sqlite3_database.sqlite3_crud import sqlite3_crud
+
+CURRENT_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price', 'quantity',
+                             'remarks']
 
 
 def gen_id(**db_cfg):

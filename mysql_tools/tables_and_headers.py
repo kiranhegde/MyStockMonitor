@@ -32,8 +32,8 @@ TOTAL_HOLDINGS_HEADER_NAME = ["ID", "Reference", "Date", "Type", "Agency", "Equi
                               'CummUnits', 'PrevCosts','CummCosts','GainLoss','Yield']
 
 
-CURRENT_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price', 'quantity',
-                             'remarks']
+# CURRENT_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price', 'quantity',
+#                              'remarks']
 # Current holding headers
 CURRENT_HOLDINGS_HEADER = ["ID", "Reference", "Agency", "Exchange", "Equity", "Buy Date", "Avg. Price", "Quantity",
                            "Remarks"]
@@ -45,21 +45,24 @@ CURRENT_HOLDING_DB_TO_DISPLAY = dict(zip(TOTAL_HOLDINGS_CALC_HEADER, TOTAL_HOLDI
 
 # list of header name to be dropped
 CURRENT_HOLDINGS_HEADER_DROP_LIST = []
-for hdr_name in TOTAL_HOLDINGS_CALC_HEADER:
+for hdr_name in TOTAL_HOLDINGS_DB_HEADER:
     if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
         CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
+    # else:
+    #     print(hdr_name)
 
 # list of header name to be dropped
-CURRENT_HOLDINGS_HEADER_DROP_LIST = []
-for hdr_name in TOTAL_HOLDINGS_CALC_HEADER:
-    if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
-        CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
+# CURRENT_HOLDINGS_HEADER_DROP_LIST = []
+# for hdr_name in TOTAL_HOLDINGS_DB_HEADER:
+#     if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
+#         CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
 
 # list of header name to be retained
 CURRENT_HOLDINGS_HEADER_DISPLAY_LIST = []
 for hdr_name in CURRENT_HOLDING_LIST_DISPLAY:
     CURRENT_HOLDINGS_HEADER_DISPLAY_LIST.append(CURRENT_HOLDING_DB_TO_DISPLAY[hdr_name])
 
+CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB = dict((v,k) for k,v in CURRENT_HOLDING_DB_TO_DISPLAY.items())
 
 SOLD_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'buy_price',
                           'sale_date', 'sale_price', 'sale_quantity', 'remarks']
@@ -180,3 +183,12 @@ def create_all_holdings_table_db_query(tablename):
               ) ;
               """ % tablename
     return create_current_holdings_table
+#
+# print(CURRENT_HOLDINGS_HEADER_DROP_LIST)
+# print(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST)
+# print(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB)
+# CURRENT_HOLDINGS_HEADER_DB = []
+# for hdr_name in CURRENT_HOLDINGS_HEADER_DISPLAY_LIST:
+#     CURRENT_HOLDINGS_HEADER_DB.append(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB[hdr_name])
+#
+# print(CURRENT_HOLDINGS_HEADER_DB)

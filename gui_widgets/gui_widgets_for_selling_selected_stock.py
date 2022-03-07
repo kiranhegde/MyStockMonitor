@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateTimeEdit
     , QVBoxLayout, QFormLayout, QHBoxLayout, QGroupBox \
     , QGridLayout, QFrame
 
+import datetime
 # from DataBase.label_names import PAY_TYPE_HOSPITAL1, PAY_TYPE_HOSPITAL2, PAYIN_DEPARTMENT_HOSPITAL, PAYIN_KEY_HOSPITAL, \
 #     DATE_TIME, DATE_TIME1, \
 #     PAYIN_KEY_PHARMACY, PAYOUT_KEY_PHARMACY, PAYIN_DEPARTMENT_PHARMACY, PAY_TYPE_PHARMACY1, \
@@ -12,8 +13,9 @@ from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateTimeEdit
 
 from utility.utility_functions import make_nested_dict, parse_str
 from utility.libnames import AGENCY_LIST, EXCHANGE_LIST
-from utility.date_time import DATE_TIME1
+from utility.date_time import DATE_TIME1,DATE_FMT_DMY
 
+from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
 
 class sell_selected_stock(QDialog):
 
@@ -48,32 +50,31 @@ class sell_selected_stock(QDialog):
         #                              'quantity', 'remarks']
         self.ref_number = self.stock_data['ref_number']
         self.agency = self.stock_data['agency']
-        self.xchange = self.stock_data['exchange']
         self.equity = self.stock_data['equity']
-        self.buy_date = self.stock_data['buy_date']
-        self.avg_price = str(self.stock_data['avg_price'])
-        self.quantity = str(self.stock_data['quantity'])
-        self.charges = "0"
+        self.buy_date = self.stock_data['date']
+        self.buy_price = str(self.stock_data['price'])
+        self.buy_quantity = str(self.stock_data['quantity'])
+        self.buy_charges = str(self.stock_data['fees'])
         self.comment = self.stock_data['remarks']
 
     def widgets(self):
         self.save_db = False
-        self.titleText = QLabel("Add New stock")
+        self.titleText = QLabel("Sell stock")
         self.agencyEntry = QLineEdit()
         self.agencyEntry = QComboBox()
         self.agencyEntry.addItems(AGENCY_LIST)
-        if self.xchange in AGENCY_LIST:
-            indx = self.exchangeEntry.findText(self.xchange)
-            self.exchangeEntry.setCurrentIndex(indx)
+        if self.agency in AGENCY_LIST:
+            indx = self.agencyEntry.findText(self.agency)
+            self.agencyEntry.setCurrentIndex(indx)
         self.agencyEntry.setDisabled(True)
         # self.agencyEntry.setPlaceholderText("Enter name of agency (Eg. Kotak, Zerodha, etc)")
         # self.exchangeEntry=QLineEdit()
         # self.exchangeEntry.setPlaceholderText("Enter name of exchange(Eg. BSE,NSE, etc)")
-        self.exchangeEntry = QComboBox()
-        self.exchangeEntry.addItems(EXCHANGE_LIST)
-        if self.agency in EXCHANGE_LIST:
-            indx = self.exchangeEntry.findText(self.agency)
-            self.exchangeEntry.setCurrentIndex(indx)
+        # self.exchangeEntry = QComboBox()
+        # self.exchangeEntry.addItems(EXCHANGE_LIST)
+        # if self.agency in EXCHANGE_LIST:
+        #     indx = self.exchangeEntry.findText(self.agency)
+        #     self.exchangeEntry.setCurrentIndex(indx)
 
         self.equityEntry = QLineEdit()
         self.equityEntry.setPlaceholderText("Enter Equity Symbol (Eg. SBI, ITC, etc)")
@@ -86,12 +87,16 @@ class sell_selected_stock(QDialog):
         self.buy_dateEntry.setEnabled(False)
 
         self.buy_priceEntry = QLineEdit()
-        self.buy_priceEntry.setText(self.avg_price)
+        self.buy_priceEntry.setText(self.buy_price)
         self.buy_priceEntry.setEnabled(False)
 
         self.buy_quantityEntry = QLineEdit()
-        self.buy_quantityEntry.setText(self.quantity)
+        self.buy_quantityEntry.setText(self.buy_quantity)
         self.buy_quantityEntry.setEnabled(False)
+
+        self.buy_chargesEntry = QLineEdit()
+        self.buy_chargesEntry.setText(self.buy_charges)
+        self.buy_chargesEntry.setEnabled(False)
 
         self.sell_dateEntry = QDateEdit(self)
         self.sell_dateEntry.setDate(QDate.currentDate())
@@ -118,7 +123,7 @@ class sell_selected_stock(QDialog):
         input_validator_float1 = QRegExpValidator(reg_ex_float1, self.chargesEntry)
         self.chargesEntry.setValidator(input_validator_float1)
         self.chargesEntry.textChanged.connect(self.check_charges)
-        self.chargesEntry.setText(self.charges)
+        self.chargesEntry.setText("0")
 
         self.remarksEntry = QLineEdit()
         self.remarksEntry.setPlaceholderText("Type your remarks ..")
@@ -163,13 +168,14 @@ class sell_selected_stock(QDialog):
         self.bottomGroupBox = QGroupBox()
 
         self.topLayout.addRow(QLabel("Agency: "), self.agencyEntry)
-        self.topLayout.addRow(QLabel("Exchange: "), self.exchangeEntry)
+        # self.topLayout.addRow(QLabel("Exchange: "), self.exchangeEntry)
         self.topLayout.addRow(QLabel("Equity: "), self.equityEntry)
         self.topLayout.addRow(QLabel("Buy Date: "), self.buy_dateEntry)
-        self.topLayout.addRow(QLabel("Average Buy Price: "), self.buy_priceEntry)
+        self.topLayout.addRow(QLabel("Buy Price: "), self.buy_priceEntry)
+        self.topLayout.addRow(QLabel("Buy Charges: "), self.buy_chargesEntry)
         self.topLayout.addRow(QLabel("Buy Quantity: "), self.buy_quantityEntry)
         self.topLayout.addRow(QLabel("Sale Date: "), self.sell_dateEntry)
-        self.topLayout.addRow(QLabel("Average Sale Price: "), self.sell_priceEntry)
+        self.topLayout.addRow(QLabel("Sale Price: "), self.sell_priceEntry)
         self.topLayout.addRow(QLabel("Sale Quantity: "), self.sell_quantityEntry)
         self.topLayout.addRow(QLabel("Charges (if any): "), self.chargesEntry)
         self.topLayout.addRow(QLabel("Remarks: "), self.remarksEntry)
@@ -240,13 +246,12 @@ class sell_selected_stock(QDialog):
             self.chargesEntry.setText("")
 
     def accept(self):
-        # self.output="hi"
         agency = self.agencyEntry.currentText()
-        xchange = self.exchangeEntry.currentText()
         equity = self.equityEntry.text()
         sale_date = self.sell_dateEntry.text()
         sale_price = self.sell_priceEntry.text()
         sale_quantity = self.sell_quantityEntry.text()
+        chargesEntry = self.chargesEntry.text()
 
         if sale_price == "":
             QMessageBox.critical(self, " Stock sale price missing !!!",
@@ -257,17 +262,35 @@ class sell_selected_stock(QDialog):
                                  " Stock quantity cannot be empty ..")
             return
 
-        if self.chargesEntry.text() == "":
-            chargesEntry = "na"
-        else:
-            chargesEntry = self.chargesEntry.text()
+        if chargesEntry == "":
+            chargesEntry = 0
 
         if self.remarksEntry.text() == "":
             comment = "na"
         else:
             comment = self.remarksEntry.text()
 
-        self.output = agency, xchange, equity, sale_date, sale_price, sale_quantity, chargesEntry, comment, self.save_db, self.removeCurrent
+        sell_stock_details = make_nested_dict()
+        for key in TOTAL_HOLDINGS_DB_HEADER:
+            sell_stock_details[key] = None
+        # dateNow = str(QDateTime.currentDateTime().toString(DATE_TIME))
+        sell_stock_details['id'] = 0
+        sell_stock_details['ref_number'] = self.ref_number
+        date_time = datetime.datetime.strptime(sale_date, DATE_FMT_DMY)
+        sell_stock_details['date'] = date_time.date()
+        sell_stock_details['type'] = TRADE_TYPE[1]
+        sell_stock_details['agency'] = agency
+        sell_stock_details['equity'] = equity
+        sell_stock_details['quantity'] = sale_quantity
+        sell_stock_details['price'] = float(sale_price)
+        sell_stock_details['fees'] = chargesEntry
+        avg_price = round(float(sale_price) + float(chargesEntry) / float(sale_quantity), 2)
+        sell_stock_details['avg_price'] = avg_price
+        sell_stock_details['current_holding'] = 0
+        sell_stock_details['remarks'] = comment
+
+        self.output = sell_stock_details, self.save_db
+        # self.output = agency, xchange, equity, sale_date, sale_price, sale_quantity, chargesEntry, comment, self.save_db, self.removeCurrent
         super(sell_selected_stock, self).accept()
 
     def clearAll(self):

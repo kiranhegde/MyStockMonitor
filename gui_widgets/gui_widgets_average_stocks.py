@@ -18,7 +18,6 @@ class average_stocks(QDialog):
         # self.con=con
         # self.cur=cur
         self.stock_data = stock_data
-
         self.dbsave = False
 
         # self.setWindowIcon(QIcon('icons/icon.ico'))
@@ -35,12 +34,14 @@ class average_stocks(QDialog):
         self.layouts()
 
     def fetch_data(self):
-        self.xchange = self.stock_data[0]
-        self.equity = self.stock_data[1]
-        self.trade_date = self.stock_data[2]
-        self.price = str(self.stock_data[3])
-        self.quantity = str(self.stock_data[4])
-        # self.Oprice = self.stock_data[5]
+        self.ref_number = self.stock_data['ref_number']
+        self.agency = self.stock_data['agency']
+        self.equity = self.stock_data['equity']
+        self.buy_date = self.stock_data['date']
+        self.avg_price = str(self.stock_data['avg_price'])
+        self.quantity = str(self.stock_data['quantity'])
+        self.charges = str(self.stock_data['fees'])
+        self.comment = self.stock_data['remarks']
 
     def widgets(self):
         fnt = QFont()
@@ -56,22 +57,21 @@ class average_stocks(QDialog):
         # self.agencyEntry.setDisabled(True)
         # self.exchangeEntry=QLineEdit()
         # self.exchangeEntry.setText(self.xchange)
-
-        self.exchangeEntry = QLineEdit()
-        self.exchangeEntry.setText(self.xchange)
-        self.exchangeEntry.setDisabled(True)
+        # self.exchangeEntry = QLineEdit()
+        # self.exchangeEntry.setText(self.xchange)
+        # self.exchangeEntry.setDisabled(True)
 
         self.equityEntry = QLineEdit()
         self.equityEntry.setText(self.equity)
         self.equityEntry.setDisabled(True)
 
         self.trade_dateEntry = QDateEdit(self)
-        self.trade_dateEntry.setDate(self.trade_date)
+        self.trade_dateEntry.setDate(self.buy_date)
         self.trade_dateEntry.setDisplayFormat(DATE_TIME1)
         self.trade_dateEntry.setDisabled(True)
 
         self.trade_priceEntry = QLineEdit()
-        self.trade_priceEntry.setText(self.price)
+        self.trade_priceEntry.setText(self.avg_price)
         self.trade_priceEntry.setDisabled(True)
 
         self.quantityEntry = QLineEdit()
@@ -239,9 +239,10 @@ class average_stocks(QDialog):
         # print("#",self.current_priceEntry.text())
         q1 = parse_str(self.quantity)
         q2 = parse_str(self.current_quantityEntry.text())
-
-        p1 = parse_str(self.price)
+        p1 = parse_str(self.avg_price)
         p2 = parse_str(self.current_priceEntry.text())
+        charges = parse_str(self.chargesEntry.text())
+
         if p2 == "":
             QMessageBox.critical(self, " Stock current price missing !!!",
                                  " Stock price cannot be empty ..")
@@ -251,24 +252,36 @@ class average_stocks(QDialog):
                                  " Stock quantity cannot be empty ..")
             return
 
+        if charges == "":
+           charges = 0.0
 
         if q2 == "":
             q2 = 0
         if p2 == "":
             p2 = 0.0
 
-        p2=p2*q2+float(self.chargesEntry.text())
-        # print(type(p1),type(p2))
-        # print(type(q1),type(q2))
-        # if self.chargesEntry.text() == "":
-        #     chargesEntry = "na"
-        # else:
-        #     chargesEntry = self.chargesEntry.text()
+        charges = float(charges) / float(q2)
+        p2=p2+charges
 
         price=[p1,p2]
         quantity=[q1,q2]
         avg_price=weighted_average(values=price,weights=quantity)
         print(avg_price)
+
+        totalstock = q1 + q2
+        # delta=round(avg-p1,3)
+        delta = round(p2 - avg_price, 3)
+        total = round(p2 * q2, 3)
+        overallPL = round(totalstock * delta, 3)
+
+        self.avg_priceEntry.setText("Average Price: " + str(avg_price))
+        self.totalQEntry.setText("Total  stock: " + str(totalstock))
+        self.delta_Entry.setText("Gain/Loss per stock: " + str(delta))
+        self.overalldelta_Entry.setText("Overall Gain/Loss : " + str(overallPL))
+        self.total_priceEntry.setText("Total Price: " + str(total))
+
+
+
 
     def layouts(self):
         self.mainLayout=QVBoxLayout()
@@ -288,11 +301,11 @@ class average_stocks(QDialog):
         self.bottomGroupBox=QGroupBox()
 
         # self.topLayout.addRow(QLabel("Agency: "),self.agencyEntry)
-        self.topLayout.addRow(QLabel("Exchange: "),self.exchangeEntry)
+        # self.topLayout.addRow(QLabel("Exchange: "),self.exchangeEntry)
         self.topLayout.addRow(QLabel("Equity: "),self.equityEntry)
         self.topLayout.addRow(QLabel("Trade Date: "),self.trade_dateEntry)
         # self.topLayout.addRow(QLabel("Settlement Date: "),self.settle_dateEntry)
-        self.topLayout.addRow(QLabel("trade Price: "),self.trade_priceEntry)
+        self.topLayout.addRow(QLabel("Average Price: "),self.trade_priceEntry)
         self.topLayout.addRow(QLabel("Quantity: "),self.quantityEntry)
         self.topLayout.addRow(QLabel("Current Price: "), self.current_priceEntry)
         self.topLayout.addRow(QLabel("Current Quantity: "), self.current_quantityEntry)

@@ -48,7 +48,7 @@ from utility.utility_functions import reduce_mem_usage, symbol_date_range_string
     create_current_holdings_csv_file_names,make_nested_dict
 from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
 
-from display_tabs.utility_diaplay_tab import get_current_holdings_history,get_sold_holdings_history
+from display_tabs.utility_display_tab import get_current_holdings_history,get_sold_holdings_history,get_current_holdings_history_mp
 
 from os.path import expanduser
 
@@ -79,6 +79,7 @@ class holdings_returns_display(QWidget):
 
         self.transactions_detail_df = self.transaction_history()
         self.overall_holdings = self.get_overall_holdings_details()
+        print(self.overall_holdings.to_string())
         # mask = self.overall_holdings['equity'] == "ADANIGREEN"
         # df=self.overall_holdings[mask].copy()
         # df.sort_values(by="date", ascending=True, inplace=True)
@@ -122,7 +123,10 @@ class holdings_returns_display(QWidget):
     def get_overall_holdings_details(self):
         data = self.total_holdings_details.read_row_by_column_values(order="order by date asc")
         all_holding_df = pd.DataFrame(data)
+        # reading only current holdings
         all_holding_df.sort_values(by=['equity'], ascending=True, inplace=True)
+        # adding fees per stock
+        all_holding_df.loc[:, 'price'] = all_holding_df.loc[:, 'price'] + all_holding_df.loc[:, 'fees'] / all_holding_df.loc[:, 'quantity']
         ticker_list = all_holding_df['equity'].to_list()
         ticker_list = sorted(list(set(ticker_list)))
 
@@ -158,7 +162,9 @@ class holdings_returns_display(QWidget):
     def calc_overall_trading_summary(self, df):
         df = df.sort_values(by=['date'], ascending=True).copy()
         # print(df.to_string())
+        # df.loc[:, 'price'] = df.loc[:, 'price']+ df.loc[:, 'fees'] / df.loc[:, 'quantity']
         df.loc[:, 'transact_val'] = df.loc[:, 'quantity'] * df.loc[:, 'price']
+
         value_list = {'quantity': 0, 'price':0,'cml_units': 0, 'prev_cost': 0, 'transact_val': 0, 'cml_cost': 0, 'avg_price': 0}
         i = 0
         for idx, row in df.iterrows():
@@ -167,10 +173,10 @@ class holdings_returns_display(QWidget):
             quantity = row['quantity']
             transact_val = row['transact_val']
             avg_price = row['avg_price']
-            price = row['price']
-            prev_units = row['quantity']
-            cml_units = row['cml_units']
-            prev_cost = row['prev_cost']
+            # price = row['price']
+            # prev_units = row['quantity']
+            # cml_units = row['cml_units']
+            # prev_cost = row['prev_cost']
 
             if i == 0:
                 df.loc[idx, ('prev_units')] = 0
@@ -305,7 +311,8 @@ class holdings_returns_display(QWidget):
         return df
 
     def extract_current_holdings_history(self,current_holding_data_df):
-        return get_current_holdings_history(current_holding_data_df)
+        # return get_current_holdings_history(current_holding_data_df)
+        return get_current_holdings_history_mp(current_holding_data_df)
 
     def extract_sold_holdings_history(self,sold_holding_data_df):
         return get_sold_holdings_history(sold_holding_data_df)
@@ -335,6 +342,7 @@ class holdings_returns_display(QWidget):
                 df['Volume'] = 1
             df.sort_values(by=['Date'], ascending=True, inplace=True)
             market_value_history = pd.concat([market_value_history, df]).groupby(['Date']).sum().reset_index()
+        # https: // stackoverflow.com / questions / 63750988 / using - multiprocessing -with-pandas - to - read - modify - and -write - thousands - csv - files
 
         # self.plot_all_returns_history=True
         if self.plot_all_returns_history:
@@ -374,59 +382,6 @@ class holdings_returns_display(QWidget):
         #     # https: // www.analyticsvidhya.com / blog / 2020 / 05 / datetime - variables - python - pandas /
         # # df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
         return market_value_history
-
-    def create_current_holdings_csv_file_names(self, df):
-        # self.current_holdings_csv_file_names=make_nested_dict()
-        return create_current_holdings_csv_file_names(df)
-
-
-    def get_current_holdings_history(self):
-        self.current_holdings_csv_file_names = self.create_current_holdings_csv_file_names(self.current_holding_data_df)
-        current_holding_history = make_nested_dict()
-        # mask = self.overall_holdings["current_holding"] == True
-        # symbol_df = self.overall_holdings[mask]
-        # symbol_df=self.current_holding_data_df
-        # print(symbol_df.head(10).to_string())
-        # exit()
-
-        # for index, row in self.current_holding_data_df.iterrows():
-        for symbol_buy_date in self.current_holdings_csv_file_names:
-            # symbol = row['Equity']
-            # buy_date = row['Date']
-            # symbol_buy_date = symbol_date_string(symbol, buy_date)
-            path_to_csv_file = self.current_holdings_csv_file_names[symbol_buy_date]
-            # path_to_csv_file = os.path.join(PDIR, PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol}_history.csv")
-
-            if os.path.isfile(path_to_csv_file):
-                # print(path_to_csv_file)
-                df = pd.DataFrame(pd.read_csv(path_to_csv_file))
-                deltatime = datetime.date.today() - datetime.timedelta(5 * 365)
-                mask = df['Date'] > str(deltatime)
-                # print('----------------before')
-                # print(df.memory_usage(deep=True))
-                for i in ['Open', 'Close', 'High', 'Low', 'Adj Close', 'Volume']:
-                    df[i] = df[i].astype('float64')
-                    # df[i] = df[i].astype("category")
-                # print('----------------after')
-                # df = reduce_mem_usage(df)
-                # print(df.memory_usage(deep=True))
-                df = df.loc[mask].copy()
-                current_holding_history[symbol_buy_date] = reduce_mem_usage(df)
-                # print(df.head(4).to_string())
-            else:
-                print(path_to_csv_file, 'path missing')
-                symbol, buy_date=symbol_date_split(symbol_buy_date)
-                symbol_ns = f"{symbol}.NS"
-                data = yf.download(symbol_ns)
-                # print(symbol, path_to_csv_file)
-                data.to_csv(path_to_csv_file)
-                df = pd.DataFrame(pd.read_csv(path_to_csv_file))
-                for i in ['Open', 'Close', 'High', 'Low', 'Adj Close', 'Volume']:
-                    df[i] = df[i].astype('float64')
-                    # df[i] = df[i].astype("category")
-                # self.sold_holding_history[symbol_date_range] = reduce_mem_usage(df)
-                current_holding_history[symbol_buy_date] = reduce_mem_usage(df)
-        return current_holding_history
 
 
     def widgets(self):

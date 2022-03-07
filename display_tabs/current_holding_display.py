@@ -17,9 +17,9 @@ import yfinance as yf
 from mysql_tools.mysql_crud import mysql_table_crud
 from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME
 from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS
-from mysql_tools.tables_and_headers import  CURRENT_HOLDING_LIST_DISPLAY, \
+from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
     CURRENT_HOLDING_DB_TO_DISPLAY, CURRENT_HOLDINGS_HEADER_DROP_LIST, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST, \
-    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER
+    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, TRADE_TYPE, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB
 
 from gui_widgets.gui_widgets_for_adding_new_stock import add_new_stock as new_stock
 from gui_widgets.gui_widgets_for_editing_selected_stock import edit_selected_stock
@@ -33,11 +33,10 @@ from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
 from utility.utility_functions import gen_id, make_nested_dict, parse_str, weighted_average, get_nested_dist_value
 from os.path import expanduser
 from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
-from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id,\
-    symbol_date_string,create_current_holdings_csv_file_names,create_sold_holdings_csv_file_names,symbol_date_split
+from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id, \
+    symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split
 
-from display_tabs.utility_diaplay_tab import get_current_holdings_history
-
+from display_tabs.utility_display_tab import get_current_holdings_history, get_current_holdings_history_mp
 
 import plotly.express as px
 from plotly import graph_objs as go
@@ -94,13 +93,14 @@ class list_of_holdings_display(QWidget):
         # required_columns=['ref_number','equity', 'date', 'avg_price', 'quantity']
         # ['Reference', 'Equity', 'Buy Date', 'Avg. Price', 'Quantity']
         # CURRENT_HOLDING_LIST_DISPLAY
-        symbol_df=symbol_df.loc[:,CURRENT_HOLDING_LIST_DISPLAY]
+        symbol_df = symbol_df.loc[:, CURRENT_HOLDING_LIST_DISPLAY]
         # symbol_df.columns = CURRENT_HOLDINGS_HEADER_DISPLAY_LIST
 
         return symbol_df
 
     def extract_current_holdings_history(self):
-        return get_current_holdings_history(self.current_holding_data_df)
+        # return get_current_holdings_history(self.current_holding_data_df)
+        return get_current_holdings_history_mp(self.current_holding_data_df)
 
     def layouts(self):
         self.mainLayout = QHBoxLayout()
@@ -161,7 +161,7 @@ class list_of_holdings_display(QWidget):
         buy_date = datetime.datetime.strptime(buy_date, DATE_FMT_DMY)
         buy_date = datetime.datetime.strftime(buy_date, DATE_FMT_YMD)
         # buy_date = datetime.datetime.strptime(buy_date, DATE_FMT_YMD)
-        symbol_buy_date = symbol_date_string(symbol,buy_date)
+        symbol_buy_date = symbol_date_string(symbol, buy_date)
         # print(symbol_buy_date)
         df = self.current_holding_history[symbol_buy_date]
         # exit()
@@ -177,7 +177,8 @@ class list_of_holdings_display(QWidget):
             return
 
         # exit()
-        if symbol_buy_date in self.current_holding_history.keys() and not self.current_holding_history[symbol_buy_date].empty:
+        if symbol_buy_date in self.current_holding_history.keys() and not self.current_holding_history[
+            symbol_buy_date].empty:
             # if symbol in self.holding_history.keys() and len(df) != 0 and :
             df = self.current_holding_history[symbol_buy_date]
             fig = make_subplots(rows=4, cols=1,
@@ -799,46 +800,37 @@ class list_of_holdings_display(QWidget):
     def add_new_stock(self):
         save_db = False
         ref_no = gen_id(**self.db_cfg)
-        # print(ref_no)
-        new_stock_addition = make_nested_dict()
 
-        newBill_inp = new_stock()
+        newBill_inp = new_stock(ref_no)
         if newBill_inp.exec_() == newBill_inp.Accepted:
-            newBill_row = list(newBill_inp.get_inp())
+            new_stock_addition, save_db = list(newBill_inp.get_inp())
             dateNow = str(QDateTime.currentDateTime().toString(DATE_TIME))
             # CURRENT_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price',
             #                              'quantity', 'remarks']
             #    0      1       2       3       4       5           6           7       8
             # agency, xchange, equity, tdate, price, quantity, chargesEntry, comment, self.save_db
-            new_stock_addition['id'] = 0
-            new_stock_addition['ref_number'] = str(ref_no)
-            new_stock_addition['agency'] = newBill_row[0]
-            new_stock_addition['exchange'] = newBill_row[1]
-            new_stock_addition['equity'] = newBill_row[2]
-            # new_stock_addition['buy_date'] = dateparser.parse(dateNow)
-            new_stock_addition['buy_date'] = dateNow
-            new_stock_addition['avg_price'] = round(
-                float(newBill_row[4]) + float(newBill_row[6]) / float(newBill_row[5]), 2)
-            new_stock_addition['quantity'] = newBill_row[5]
-            charges = newBill_row[6]
-            new_stock_addition['remarks'] = newBill_row[7]
-            save_db = newBill_row[8]
+            # TOTAL_HOLDINGS_DB_HEADER = ['id', 'ref_number', 'date', 'type', 'agency', 'equity', 'quantity', 'price',
+            # 'fees', 'avg_price', 'current_holding', 'remarks']
 
             df_row = pd.DataFrame([new_stock_addition])
             listt = list(new_stock_addition.values())
             vals_tuple = [tuple(listt)]
-            df_row.columns = CURRENT_HOLDING_DB_HEADER
-            # df_row = df_row.drop(columns=['ID', 'User', 'Edit Info', "Mobile Number"])
-
-            if save_db:
-                messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
-
+            df_row.columns = TOTAL_HOLDINGS_DB_HEADER
             df_row.drop(CURRENT_HOLDINGS_HEADER_DROP_LIST, axis=1, inplace=True)
+            # reorder columns names
+            CURRENT_HOLDINGS_HEADER_DB = []
+            for hdr_name in CURRENT_HOLDINGS_HEADER_DISPLAY_LIST:
+                CURRENT_HOLDINGS_HEADER_DB.append(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB[hdr_name])
+            df_row = df_row.loc[:, CURRENT_HOLDINGS_HEADER_DB]
             df_row.columns = CURRENT_HOLDINGS_HEADER_DISPLAY_LIST
+
             self.current_holding_data_df = pd.concat([df_row, self.current_holding_data_df]).reset_index(drop=True)
             self.holdingModel.update(self.current_holding_data_df, key="New")
             self.holdingModel.layoutChanged.emit()
             self.holdingTable.clearSelection()
+
+            if save_db:
+                messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
 
             # self.calculate_sum()
 
@@ -852,76 +844,53 @@ class list_of_holdings_display(QWidget):
         # fetch data from mysql
         index = self.holdingTable.currentIndex().row()
         ncol = self.holdingModel.columnCount()
-        new_stock_addition = make_nested_dict()
         row_data = []
         for col in range(ncol):
             val = self.holdingTable.model().index(index, col).data()
             row_data.append(val)
 
+        edit_stock = make_nested_dict()
+        for key in TOTAL_HOLDINGS_DB_HEADER:
+            edit_stock[key] = None
         search_item = f"ref_number = {row_data[0]}"
         row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
 
         # print(row_data)
         # print(row_data_db)
-
         if row_data_db['ref_number'] != '':
             editBill_inp = edit_selected_stock(row_data_db)
             if editBill_inp.exec_() == editBill_inp.Accepted:
-                newBill_row = editBill_inp.get_inp()
-                # print("#", newBill_row)
-                # "ID", "Reference", "Agency", "Exchange", "Equity", "Buy Date", "Avg. Price", "Quantity",
-                # "Remarks"
-                new_stock_addition['id'] = 0
-                new_stock_addition['ref_number'] = str(row_data_db['ref_number'])
-                new_stock_addition['agency'] = newBill_row[0]
-                new_stock_addition['exchange'] = newBill_row[1]
-                new_stock_addition['equity'] = newBill_row[2]
-                # new_stock_addition['buy_date'] = dateparser.parse(dateNow)
-                date_time = datetime.datetime.strptime(newBill_row[3], DATE_FMT_DMY)
-                # date_time = datetime.strftime(date_time, DATE_FMT_YMD)
-                # datetime = datetime.datetime.strptime(input, format)
-                new_stock_addition['buy_date'] = date_time.date()  # newBill_row[3]
-                new_stock_addition['avg_price'] = round(
-                    float(newBill_row[4]) + float(newBill_row[6]) / float(newBill_row[5]), 2)
-                new_stock_addition['quantity'] = newBill_row[5]
-                charges = newBill_row[6]
-                new_stock_addition['remarks'] = newBill_row[7]
-                save_db = newBill_row[8]
-
-                df_row = pd.DataFrame([new_stock_addition])
-                listt = list(new_stock_addition.values())
-                vals_tuple = [tuple(listt)]
-                df_row.columns = CURRENT_HOLDING_DB_HEADER
-                # df_row = df_row.drop(columns=['ID', 'User', 'Edit Info', "Mobile Number"])
-                set_list = ""
-                for k, v in new_stock_addition.items():
-                    if k != 'id':
-                        set_list = f"{set_list},{k}='{v}'"
-                set_list = set_list[1:]
+                edit_stock_details, save_db = editBill_inp.get_inp()
 
                 # print("update val --> ", set_list)
                 # https: // stackoverflow.com / questions / 21608228 / conditional - replace - pandas
                 # https: // stackoverflow.com / questions / 36909977 / update - row - values - where - certain - condition - is -met - in -pandas / 36910033
-                if save_db:
-                    # print("updated 2 db")
-                    messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
-                                                                                      criteria=f"ref_number='{row_data_db['ref_number']}'")
-                    # print(messge)
-                    # messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
 
                 mask1 = self.current_holding_data_df["Reference"] == row_data_db['ref_number']
-                for k, v in new_stock_addition.items():
+                for k, v in edit_stock_details.items():
                     key = CURRENT_HOLDING_DB_TO_DISPLAY[k]
                     if key in self.current_holding_data_df.columns.values.tolist() and key != 'Reference':
-                        self.current_holding_data_df.loc[mask1, key] = new_stock_addition[k]
+                        self.current_holding_data_df.loc[mask1, key] = edit_stock_details[k]
 
                 self.holdingModel.update(self.current_holding_data_df, key="New")
                 self.holdingModel.layoutChanged.emit()
                 self.holdingTable.clearSelection()
+
+                if save_db:
+                    set_list = ""
+                    for k, v in edit_stock_details.items():
+                        if k != 'id':
+                            set_list = f"{set_list},{k}='{v}'"
+                    set_list = set_list[1:]
+                    messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
+                                                                                      criteria=f"ref_number='{row_data_db['ref_number']}'")
+                    # print(set_list)
+                    # print(messge)
+
                 # self.calculate_sum()
-            else:
-                QMessageBox.information(self, 'Insufficient data !!',
-                                        f'Insufficient data in selected  transaction/bill..')
+            # else:
+            #     QMessageBox.information(self, 'Insufficient data !!',
+            #                             f'Insufficient data in selected  transaction/bill..')
 
     def delete_selected_stock(self):
         # fetch data from mysql
@@ -974,7 +943,7 @@ class list_of_holdings_display(QWidget):
         # fetch data from mysql
         index = self.holdingTable.currentIndex().row()
         ncol = self.holdingModel.columnCount()
-        new_stock_addition = make_nested_dict()
+        # new_stock_addition = make_nested_dict()
         row_data = []
         for col in range(ncol):
             val = self.holdingTable.model().index(index, col).data()
@@ -984,98 +953,79 @@ class list_of_holdings_display(QWidget):
         row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
 
         # print(row_data)
-        print(row_data_db)
+        # print(row_data_db)
         old_price = parse_str(row_data_db['avg_price'])
         old_quantity = parse_str(row_data_db['quantity'])
 
         if row_data_db['ref_number'] != '':
             sell_stock_inp = sell_selected_stock(row_data_db)
             if sell_stock_inp.exec_() == sell_stock_inp.Accepted:
-                newBill_row = sell_stock_inp.get_inp()
-                date_time = datetime.strptime(newBill_row[3], DATE_FMT_DMY)
-                sold_price = parse_str(newBill_row[4])
-                sold_quantity = parse_str(newBill_row[5])
-                balance_quantity = old_quantity - sold_quantity
-                print("#", date_time)
-                print("old_price", old_price)
-                print("old_quantity", old_quantity)
-                print("sold_price", sold_price)
-                print("sold_quantity", sold_quantity)
+                sell_stock_details, save_db = sell_stock_inp.get_inp()
+                balance_quantity = int(old_quantity) - int(sell_stock_details['quantity'])
                 if balance_quantity > 0:
-                    print("balance_quantity", balance_quantity)
-                    set_list = f"quantity = '{balance_quantity}'"
-                    search_criteria = f"ref_number = '{row_data_db['ref_number']}'"
-                    messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
-                                                                                      criteria=search_criteria)
-                    print(messge)
+                    # updating latest changes to gui table
+                    row_data_db['quantity'] = balance_quantity
+                    mask1 = self.current_holding_data_df["Reference"] == row_data_db['ref_number']
+                    for k, v in row_data_db.items():
+                        key = CURRENT_HOLDING_DB_TO_DISPLAY[k]
+                        if key in self.current_holding_data_df.columns.values.tolist() and key != 'Reference':
+                            self.current_holding_data_df.loc[mask1, key] = row_data_db[k]
 
-                new_stock_addition['id'] = 0
-                new_stock_addition['ref_number'] = str(row_data_db['ref_number'])
-                new_stock_addition['agency'] = newBill_row[0]
-                new_stock_addition['exchange'] = newBill_row[1]
-                new_stock_addition['equity'] = newBill_row[2]
-                # new_stock_addition['buy_date'] = dateparser.parse(dateNow)
-                date_time = datetime.strptime(newBill_row[3], DATE_FMT_DMY)
-                # date_time = datetime.strftime(date_time, DATE_FMT_YMD)
-                # datetime = datetime.datetime.strptime(input, format)
-                new_stock_addition['buy_date'] = date_time.date()  # newBill_row[3]
-                new_stock_addition['avg_price'] = round(
-                    float(newBill_row[4]) + float(newBill_row[6]) / float(newBill_row[5]), 2)
-                new_stock_addition['quantity'] = newBill_row[5]
-                charges = newBill_row[6]
-                new_stock_addition['remarks'] = newBill_row[7]
+                    self.holdingModel.update(self.current_holding_data_df, key="New")
+                    self.holdingModel.layoutChanged.emit()
+                    self.holdingTable.clearSelection()
+
+                    # updating latest changes to database
+                    if save_db:
+                        set_list = f"quantity = '{balance_quantity}'"
+                        messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
+                                                                                          criteria=f"ref_number='{row_data_db['ref_number']}'")
+                    # adding sold quantities to database
+                    if save_db:
+                        sell_stock_details['ref_number'] = gen_id(**self.db_cfg)
+                        listt = list(sell_stock_details.values())
+                        vals_tuple = [tuple(listt)]
+                        messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
+                        print(messge)
+                elif balance_quantity == 0:
+                    if save_db:
+                        set_list = f"current_holding = '{0}'"
+                        messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
+                                                                                          criteria=f"ref_number='{row_data_db['ref_number']}'")
+                        sell_stock_details['ref_number'] = gen_id(**self.db_cfg)
+                        listt = list(sell_stock_details.values())
+                        vals_tuple = [tuple(listt)]
+                        messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
+                        # print(messge)
+                        mask1 = self.current_holding_data_df["Reference"] == int(row_data[0])
+                        index = self.current_holding_data_df[mask1].index
+                        self.current_holding_data_df.drop(index, axis=0, inplace=True)
+                        self.holdingModel.update(self.current_holding_data_df, key="Delete")
+                        self.holdingModel.layoutChanged.emit()
+                        self.holdingTable.clearSelection()
+                else:
+                    QMessageBox.information(self, 'Balance quantity incorrect !!',
+                                            f"Available stock is only {old_quantity}.\nYou have tried to sell {sell_stock_details['quantity']}")
+
 
     def stock_avg(self):
         index = self.holdingTable.currentIndex().row()
         ncol = self.holdingModel.columnCount()
-        new_stock_addition = make_nested_dict()
         row_data = []
         for col in range(ncol):
             val = self.holdingTable.model().index(index, col).data()
             row_data.append(val)
 
-        # self.overall_holdings
-        ref_number = f"ref_number = {row_data[0]}"
-        mask = self.overall_holdings['equity'] == "IRCTC"
-        print(self.overall_holdings.loc[mask].to_string())
-        exit()
+        edit_stock = make_nested_dict()
+        for key in TOTAL_HOLDINGS_DB_HEADER:
+            edit_stock[key] = None
         search_item = f"ref_number = {row_data[0]}"
         row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
         print(row_data_db)
-        print(row_data)
-        stock_data = []
-        stock_data.clear()
-        stock_data.append(row_data_db["exchange"])
-        stock_data.append(row_data_db["equity"])
-        stock_data.append(row_data_db["buy_date"])
-        stock_data.append(row_data_db["avg_price"])
-        stock_data.append(row_data_db["quantity"])
 
         if row_data[0] != "":
-            showInfo = average_stocks(stock_data)
+            showInfo = average_stocks(row_data_db)
             showInfo.exec_()
-
-        # if self.stockList.selectedItems():
-        #     agency = self.List_of_agency.currentItem().text()
-        #     row_number = self.stockList.currentRow()
-        #     invoice = int(self.stockList.item(row_number, 0).text())
-        #     one_stock = self.get_stock_info(agency, invoice)
-        #
-        #     stock_data = []
-        #     stock_data.clear()
-        #     stock_data.append(one_stock["exchange"])
-        #     stock_data.append(one_stock["equity"])
-        #     stock_data.append(one_stock["Tdate"])
-        #     stock_data.append(one_stock["Tprice"])
-        #     stock_data.append(one_stock["quantity"])
-        #     stock_data.append(one_stock["Oprice"])
-        #
-        #     if invoice:
-        #         # print(stock_data)
-        #         showInfo = average_stocks(stock_data)
-        #         showInfo.exec_()
-        #     else:
-        #         pass
 
     def clear_and_close(self):
         # print('clear and close')
