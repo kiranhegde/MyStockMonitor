@@ -216,6 +216,14 @@ def create_current_holdings_csv_file_names(symbol_df):
         symbol_csv_path_list[symbol_buy_date]=path_to_csv_file
     return  symbol_csv_path_list
 
+def create_indices__csv_file_names(indices_df):
+    symbol_csv_path_list = make_nested_dict()
+    symbol = 'nifty50'
+    # buy_date = row['date']
+    # symbol_buy_date = symbol_date_string(symbol, buy_date)
+    path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol}_history.csv")
+    symbol_csv_path_list[symbol] = path_to_csv_file
+
 
 def create_sold_holdings_csv_file_names(df):
     symbol_csv_path_list = make_nested_dict()

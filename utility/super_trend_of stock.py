@@ -72,7 +72,7 @@ for symbol in stock_list:
     df = yf.download(symbol, start='2020-01-01')
     supertrend = Supertrend(df, atr_period, atr_multiplier)
     df = df.join(supertrend)
-print(df.tail(15))
+# print(df.tail(15))
 
 # visualization
 # plt.figure(figsize=(16, 9), dpi=360)
@@ -82,6 +82,7 @@ plt.plot(df['Close'], linewidth=2, label='Close Price')
 plt.plot(df['Final Lowerband'], 'g', label='Final Lowerband')
 plt.plot(df['Final Upperband'], 'r', label='Final Upperband')
 plt.show()
+
 
 
 # backtesting
@@ -140,6 +141,7 @@ for e in exit:
     plt.plot(df.index[e[0]], e[1], marker='v', color='red', markersize=12, linewidth=0, label='Exit')
 plt.show()
 
+exit()
 # get the full stock list of S&P 500
 # payload = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
 # stock_list = payload[0]['Symbol'].values.tolist()

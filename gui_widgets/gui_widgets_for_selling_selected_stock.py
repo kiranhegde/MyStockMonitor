@@ -184,7 +184,7 @@ class sell_selected_stock(QDialog):
         self.bottomGroupBox.setLayout(self.bottomLayout)
         self.mainTopLayout.addWidget(self.topGroupBox)
         self.mainTopLayout.addWidget(self.saveDB)
-        self.mainTopLayout.addWidget(self.deleteHolding)
+        # self.mainTopLayout.addWidget(self.deleteHolding)
         self.mainTopLayout.addWidget(self.bottomGroupBox)
 
         self.mainLayout.addLayout(self.mainTopLayout)

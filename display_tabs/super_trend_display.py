@@ -50,7 +50,7 @@ usr_path = expanduser("~")
 DEFAULT_PATH = f"{usr_path}/Desktop/"
 
 
-class list_of_holdings_display(QWidget):
+class stock_super_trend_display(QWidget):
     def __init__(self, **mysql_data):
         super().__init__()
         # self.setWindowTitle("Balance test")

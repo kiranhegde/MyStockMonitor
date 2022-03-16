@@ -183,7 +183,20 @@ def create_all_holdings_table_db_query(tablename):
               ) ;
               """ % tablename
     return create_current_holdings_table
-#
+
+def create_indices_table_db_query(tablename):
+    create_indices_table = """
+              CREATE TABLE  IF NOT EXISTS %s (     
+              id INT AUTO_INCREMENT  PRIMARY KEY,       
+              ref_number INT NOT NULL,
+              from_date DATE NOT NULL,             
+              indice_name TEXT NOT NULL,  
+              remarks TEXT
+              ) ;
+              """ % tablename
+    return create_indices_table
+
+
 # print(CURRENT_HOLDINGS_HEADER_DROP_LIST)
 # print(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST)
 # print(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB)

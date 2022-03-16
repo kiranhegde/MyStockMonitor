@@ -9,11 +9,11 @@ from utility.utility_functions import reduce_mem_usage, make_nested_dict, symbol
 
 from multiprocessing import Pool
 
-def get_current_holdings_history_mp(current_holding_data_df):
+def get_current_holdings_history_mp(holdings_csv_file_names):
     # https://stackoverflow.com/questions/62130801/parallel-processing-in-python-to-fill-a-dictionary-with-the-value-as-a-dictionar
     # from multiprocessing import Process, Manager
     current_holding_history = make_nested_dict()
-    current_holdings_csv_file_names = create_current_holdings_csv_file_names(current_holding_data_df)
+    # current_holdings_csv_file_names = create_current_holdings_csv_file_names(current_holding_data_df)
 
     def csv_file_read(filename):
         f = pd.read_csv(filename)
@@ -36,8 +36,7 @@ def get_current_holdings_history_mp(current_holding_data_df):
 
     # pool = Pool(processes=6)
     deltatime = datetime.date.today() - datetime.timedelta(5 * 365)
-    # for index, row in  .current_holding_data_df.iterrows():
-    for symbol_buy_date, path_to_csv_file in current_holdings_csv_file_names.items():
+    for symbol_buy_date, path_to_csv_file in holdings_csv_file_names.items():
 
         if os.path.isfile(path_to_csv_file):
             csv_data=csv_file_read(path_to_csv_file)
@@ -92,9 +91,9 @@ def get_current_holdings_history(current_holding_data_df):
     return current_holding_history
 
 
-def get_sold_holdings_history(overall_holdings):
+def get_sold_holdings_history(sold_holdings_csv_file_names):
     sold_holding_history = make_nested_dict()
-    sold_holdings_csv_file_names = create_sold_holdings_csv_file_names(overall_holdings)
+    # sold_holdings_csv_file_names = create_sold_holdings_csv_file_names(overall_holdings)
     # print(sold_holdings_csv_file_names)
     # exit()
 

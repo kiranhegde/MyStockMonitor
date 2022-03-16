@@ -18,11 +18,10 @@ from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
 
 class add_new_stock(QDialog):
 
-    # def __init__(self,con,cur,agency=""):
     def __init__(self, ref_no,agency="", dbsave=False, parent=None):
         super(add_new_stock, self).__init__(parent)
         self.setWindowModality(Qt.ApplicationModal)
-        self.setWindowTitle("Edit stock data")
+        self.setWindowTitle("Adding New stock")
         self.ref_no = ref_no
         # self.new_stock_addition = new_stock_addition
         self.dbsave = dbsave
@@ -61,6 +60,7 @@ class add_new_stock(QDialog):
         self.trade_dateEntry = QDateEdit(self)
         self.trade_dateEntry.setDate(QDate.currentDate())
         self.trade_dateEntry.setDisplayFormat(DATE_TIME1)
+
         self.trade_priceEntry = QLineEdit()
         self.trade_priceEntry.setPlaceholderText("Enter average price")
         reg_ex_float = QRegExp("[0-9]+.?[0-9]{,2}")
@@ -241,8 +241,8 @@ class add_new_stock(QDialog):
 
         self.topLayout.addRow(QLabel("Agency: "), self.agencyEntry)
         # self.topLayout.addRow(QLabel("Exchange: "), self.exchangeEntry)
-        self.topLayout.addRow(QLabel("Equity: "), self.equityEntry)
         self.topLayout.addRow(QLabel("Trade Date: "), self.trade_dateEntry)
+        self.topLayout.addRow(QLabel("Equity: "), self.equityEntry)
         self.topLayout.addRow(QLabel("Average Price: "), self.trade_priceEntry)
         self.topLayout.addRow(QLabel("Quantity: "), self.quantityEntry)
         self.topLayout.addRow(QLabel("Charges (if any): "), self.chargesEntry)

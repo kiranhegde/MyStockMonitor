@@ -39,6 +39,7 @@ from gui_widgets.gui_widgets_add_mysql_login import update_mysql_login
 from gui_widgets.gui_widgets_return_history_data_selection import return_history_range_selection
 from display_tabs.current_holding_display import list_of_holdings_display
 from display_tabs.overall_holding_returns_display import holdings_returns_display
+from display_tabs.super_trend_display import stock_super_trend_display
 from utility.fonts_style import FONT1, TABLE_HEADER_FONT, TABLE_FONT
 from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id,\
     symbol_date_string,create_current_holdings_csv_file_names,create_sold_holdings_csv_file_names,symbol_date_split
@@ -81,7 +82,7 @@ class MyMainWindow(QMainWindow):
         super(MyMainWindow, self).__init__(parent)
         self.welcome = WELCOME
         self.setWindowTitle(self.welcome)
-        self.setWindowIcon(QIcon('icons/ksirtet.ico'))
+        self.setWindowIcon(QIcon('icons/stock_mngmt.ico'))
         self.setGeometry(450, 150, 750, 600)
         self.statusBar()
         self.close_now = False
@@ -93,6 +94,7 @@ class MyMainWindow(QMainWindow):
         # self.showFullScreen()
 
     def UI(self):
+        # self.get_indices_data()
         self.check_folders()
         self.check_sqlite_db_info()
         self.extablish_db_connection()
@@ -155,6 +157,38 @@ class MyMainWindow(QMainWindow):
         self.tabWidgets()
         # self.get_column_value_count()
         self.widgets()
+
+    def get_indices_data(self):
+        symbol='NSE'
+        # symbol='CNXIT'
+        symbol_ns=f"{symbol}.NS"
+        # start_date="2015-1-1"
+        # end_date = datetime.date.today()
+        # data = yf.download(symbol_ns, start=start_date, end=end_date, threads=True)
+        # # data = yf.download(symbol_ns)
+        # path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol}_history.csv")
+        # data.to_csv(path_to_csv_file)
+        # df = pd.DataFrame(pd.read_csv(path_to_csv_file))
+        # print(df.head(10).to_string())
+        # print(df.tail(10).to_string())
+
+        # from pandas_datareader import data as pdr
+        #
+        # import yfinance as yf
+        # yf.pdr_override()  # <== that's all it takes :-)
+
+        import pandas_datareader as web
+
+        start = datetime.datetime(2017, 9, 1)
+        end = datetime.datetime(2022, 3, 15)
+        df = web.DataReader("nifty50", 'yahoo', start, end)
+
+        # download dataframe
+        # data = pdr.get_data_yahoo(symbol_ns, start="2017-01-01", end="2017-04-30")
+        # df = pd.DataFrame(data)
+        print(df.head(10).to_string())
+        print(df.tail(10).to_string())
+        exit()
 
     def connect_to_db_tables(self):
 
@@ -1105,6 +1139,12 @@ class MyMainWindow(QMainWindow):
 
         # if self.my_access == "Write Only":
         #     statement_file.setEnabled(False)
+        trend_sheet = QAction(QIcon("icons/docu.png"), "Trend", self)
+        trend_sheet.triggered.connect(self.stock_trend)
+        trend_sheet.setStatusTip("Plot trend of a stock")
+        trend_sheet.setToolTip("Plot trend of a stock")
+        tb.addAction(trend_sheet)
+        tb.addSeparator()
 
         import_data = QAction(QIcon("icons/document-import.png"), "Import", self)
         import_data.triggered.connect(self.call_import_csv_to_mysql)
@@ -1174,6 +1214,12 @@ class MyMainWindow(QMainWindow):
         quit_app.setToolTip("Closing the application")
         tb.addAction(quit_app)
         tb.addSeparator()
+
+    def stock_trend(self):
+        title = f"Super Trend: {datetime.date.today()}"
+        self.tabs_selected[title] = True
+        self.load_selected_tabs(stock_super_trend_display(**self.db_cfg), title)
+
 
     def mysql_login_info0(self):
         self.mysql_login_info(close_now=self.close_now)

@@ -312,10 +312,13 @@ class holdings_returns_display(QWidget):
 
     def extract_current_holdings_history(self,current_holding_data_df):
         # return get_current_holdings_history(current_holding_data_df)
-        return get_current_holdings_history_mp(current_holding_data_df)
+        current_holdings_csv_file_names = create_current_holdings_csv_file_names(current_holding_data_df)
+        return get_current_holdings_history_mp(current_holdings_csv_file_names)
 
     def extract_sold_holdings_history(self,sold_holding_data_df):
-        return get_sold_holdings_history(sold_holding_data_df)
+        sold_holdings_csv_file_names = create_current_holdings_csv_file_names(sold_holding_data_df)
+        return get_sold_holdings_history(sold_holdings_csv_file_names)
+        # return get_sold_holdings_history(sold_holding_data_df)
 
     def overall_return(self):
         market_value_history = pd.DataFrame()
