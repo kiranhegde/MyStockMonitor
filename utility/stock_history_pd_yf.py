@@ -11,10 +11,21 @@ import yfinance as yf
 
 
 
-start_date = datetime(2019, 1, 1)
+start_date = datetime(2015, 1, 1)
 end_date = datetime(2022, 1, 4)
-data = yf.download('DMART.NS', start=start_date, end=end_date)
-mpf.plot(data,type='candle',mav=(20,50,100),volume=True,show_nontrading=True)
+# https://finance.yahoo.com/quote/%5ENSEBANK?p=%5ENSEBANK&ncid=yahooproperties_peoplealso_km0o32z3jzm
+# data = yf.download('^NSEBANK', start=start_date, end=end_date)
+# data = yf.download('^CNXIT', start=start_date, end=end_date)
+# data = yf.download('^CNXPHARMA', start=start_date, end=end_date)
+# data = yf.download('^CNXAUTO', start=start_date, end=end_date)
+# data = yf.download('^CNXMETAL', start=start_date, end=end_date)
+# data = yf.download('^CNXFMCG', start=start_date, end=end_date)
+# data = yf.download('^CNXENERGY', start=start_date, end=end_date)
+# data = yf.download('^CNXAUTO', start=start_date, end=end_date)
+# data = yf.download('^NSEI', start=start_date, end=end_date)
+data = yf.download('^NSEI', start=start_date)
+print(data.head().to_string())
+mpf.plot(data,type='candle',mav=(20,50,100,200),volume=True,show_nontrading=True)
 
 exit()
 

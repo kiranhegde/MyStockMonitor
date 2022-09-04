@@ -69,6 +69,11 @@ class pandasModel(QAbstractTableModel):
     # https: // stackoverflow.com / questions / 24122306 / custom - tableview - model for -pandas - dataframe
     def update(self, data, key="edit"):
         self._data = data
+        # self.layoutChanged.emit()
+        # self.clearSelection()
+        self.layoutAboutToBeChanged.emit()
+        self.dataChanged.emit(self.createIndex(0, 0), self.createIndex(self.rowCount(0), self.columnCount(0)))
+        self.layoutChanged.emit()
 
     # def insertRows(self, row, rows=1, index=QModelIndex()):
     #     print("Inserting at row: {row}")

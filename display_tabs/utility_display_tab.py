@@ -8,6 +8,8 @@ from utility.utility_functions import reduce_mem_usage, make_nested_dict, symbol
     symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split
 
 from multiprocessing import Pool
+import multiprocessing
+from threading import Thread
 
 def get_current_holdings_history_mp(holdings_csv_file_names):
     # https://stackoverflow.com/questions/62130801/parallel-processing-in-python-to-fill-a-dictionary-with-the-value-as-a-dictionar
@@ -21,7 +23,7 @@ def get_current_holdings_history_mp(holdings_csv_file_names):
 
     def download_and_read_csv(symbol,filename):
         # data = yf.download(symbol_ns, threads=True)
-        data = yf.download(symbol)
+        data = yf.download(symbol,threads=True)
         data.to_csv(filename)
         f=csv_file_read(filename)
         return f
@@ -35,12 +37,15 @@ def get_current_holdings_history_mp(holdings_csv_file_names):
         current_holding_history[symbol_buy_date] = reduce_mem_usage(df)
 
     # pool = Pool(processes=6)
+    jobs=[]
     deltatime = datetime.date.today() - datetime.timedelta(5 * 365)
     for symbol_buy_date, path_to_csv_file in holdings_csv_file_names.items():
 
         if os.path.isfile(path_to_csv_file):
             csv_data=csv_file_read(path_to_csv_file)
             compile_stock_data(csv_data)
+            # process=multiprocessing.Process(target=compile_stock_data,args=(csv_data))
+            # jobs.append(process)
             # pool.apply_async(csv_file_read, args=(path_to_csv_file,), callback=compile_stock_data)
         else:
             print(path_to_csv_file, 'path missing')
@@ -48,7 +53,18 @@ def get_current_holdings_history_mp(holdings_csv_file_names):
             symbol_ns = f"{symbol}.NS"
             csv_data=download_and_read_csv(symbol_ns,path_to_csv_file)
             compile_stock_data(csv_data)
+            # process = multiprocessing.Process(target=compile_stock_data, args=(csv_data))
+            # jobs.append(process)
+
             # pool.apply_async(download_and_read_csv, args=(symbol_ns,path_to_csv_file,), callback=compile_stock_data)
+
+    # # Start the processes (i.e. calculate the random number lists)
+    # for j in jobs:
+    #     j.start()
+    #
+    # # Ensure all of the processes have finished
+    # for j in jobs:
+    #     j.join()
 
     # pool.close()
     # pool.join()

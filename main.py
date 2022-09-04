@@ -1,50 +1,58 @@
 import datetime
 import os.path
-from pathlib import Path
 import shutil
-import tarfile
-import time
-import yfinance as yf
+from pathlib import Path
 
 import pandas as pd
+import yfinance as yf
 from PyQt5.QtCore import Qt, QTimer, QCoreApplication, QProcess
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QMessageBox, QAction, QFileDialog, QTabWidget \
-    , QMainWindow, QApplication, QMenu
+from PyQt5.QtWidgets import QMenu, QAction, QTableView, QMessageBox, \
+    QAbstractItemView, \
+    QHeaderView, QFileDialog
+from PyQt5.QtWidgets import QTabWidget \
+    , QMainWindow, QApplication
 
-# import PyQt5.sip # required to function exe file
-import PyQt5.sip
-
-from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, QLabel, QMessageBox, \
-    QVBoxLayout, QHBoxLayout, QGroupBox, \
-    QGridLayout, QAbstractItemView, \
-    QHeaderView, QSplitter, QFileDialog
-
-from utility.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS, \
-    PATH_TO_DATABASE, PATH_TO_DATABASE_BACKUP, PATH_TO_DATABASE_SOLD_HOLDINGS, PATH_TO_DATABASE_SOLD_HOLDINGS_BKP, \
-    PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, SOLD_HOLDINGS_DB_TABLE_NAME, \
-    BANK_TRANSACTIONS_DB_TABLE_NAME
-from utility.utility_functions import make_nested_dict, date_time_day_start_end
-from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, create_current_holdings_table_db_query, \
-    create_transaction_table_db_query, create_sold_holdings_table_db_query, create_all_holdings_table_db_query, \
-    BANK_TRANSACTIONS_DB_HEADER,  SOLD_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, \
-    BANK_TRANSACTIONS_DB_TABLE_NAME, DEFAULTS_DB_HEADER, SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, \
-    TOTAL_HOLDINGS_DB_HEADER, TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_CALC_HEADER, TOTAL_HOLDINGS_EXTRA_HEADER, \
-    CURRENT_HOLDING_LIST_DISPLAY, CURRENT_HOLDING_DB_TO_DISPLAY, BANK_TRANSACTIONS_LIST_DISPLAY, \
-    BANK_TRANSACTIONS_DB_TO_DISPLAY
-from sqlite3_database.sqlite3_crud import sqlite3_crud
-from gui_widgets.gui_widgets_add_mysql_login import update_mysql_login
-from gui_widgets.gui_widgets_return_history_data_selection import return_history_range_selection
 from display_tabs.current_holding_display import list_of_holdings_display
-from display_tabs.overall_holding_returns_display import holdings_returns_display
+from display_tabs.indexes_trend_display import indexes_display
+from display_tabs.overall_holding_returns_display import \
+    holdings_returns_display
 from display_tabs.super_trend_display import stock_super_trend_display
+from gui_widgets.gui_widgets_add_mysql_login import update_mysql_login
+from gui_widgets.gui_widgets_return_history_data_selection import \
+    return_history_range_selection
+from gui_widgets.gui_widgets_transactions import \
+    show_transactions as bank_transactions_details
+from mysql_tools.mysql_crud import mysql_table_crud
+from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, \
+    create_current_holdings_table_db_query, \
+    create_transaction_table_db_query, create_sold_holdings_table_db_query, \
+    create_all_holdings_table_db_query, \
+    BANK_TRANSACTIONS_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, \
+    BANK_TRANSACTIONS_DB_TABLE_NAME, \
+    SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, \
+    TOTAL_HOLDINGS_DB_HEADER, TOTAL_HOLDINGS_DB_TABLE_NAME, \
+    CURRENT_HOLDING_LIST_DISPLAY, CURRENT_HOLDING_DB_TO_DISPLAY, \
+    BANK_TRANSACTIONS_LIST_DISPLAY, \
+    BANK_TRANSACTIONS_DB_TO_DISPLAY, INDEX_DB_TABLE_NAME, \
+    create_indexes_table_db_query, INDEXES_DB_HEADER,INDEX_NAME_DICT
+from sqlite3_database.sqlite3_crud import sqlite3_crud
 from utility.fonts_style import FONT1, TABLE_HEADER_FONT, TABLE_FONT
-from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id,\
-    symbol_date_string,create_current_holdings_csv_file_names,create_sold_holdings_csv_file_names,symbol_date_split
-from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY, DATE_FMT_YDM
+from utility.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, \
+    MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS, \
+    PATH_TO_DATABASE, PATH_TO_DATABASE_BACKUP, PATH_TO_DATABASE_SOLD_HOLDINGS, \
+    PATH_TO_DATABASE_SOLD_HOLDINGS_BKP, \
+    PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP,PATH_TO_DATABASE_CURRENT_INDEX, \
+    PATH_TO_DATABASE_INDEX_BKP
 from utility.tableViewModel import pandasModel
+from utility.utility_functions import make_nested_dict
+from utility.utility_functions import reduce_mem_usage, \
+    symbol_date_range_string, symbol_date_string, \
+    create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, \
+    symbol_date_split,create_current_index_csv_file_names
+
+
+import PyQt5.sip # required to function exe file
 
 
 # PEP8 Reformat Code press Ctrl+Alt+L.
@@ -100,6 +108,13 @@ class MyMainWindow(QMainWindow):
         self.extablish_db_connection()
         self.check_db_tables_exists()
         self.connect_to_db_tables()
+
+        # print(os.cpu_count())
+
+        # self.update_stock_history_multithread()
+        # self.update_stock_history_multi_process()
+
+        # exit()
 
         # self.transactions_df = self.transaction_history()
         # self.overall_holdings = self.get_all_holdings_info()
@@ -199,6 +214,10 @@ class MyMainWindow(QMainWindow):
         self.total_holdings_details = mysql_table_crud(db_table=TOTAL_HOLDINGS_DB_TABLE_NAME,
                                                        db_header=TOTAL_HOLDINGS_DB_HEADER,
                                                        **self.db_cfg)
+
+        self.total_index_details = mysql_table_crud(db_table=INDEX_DB_TABLE_NAME,
+                                                    db_header=INDEXES_DB_HEADER,
+                                                    **self.db_cfg)
 
     def transaction_history(self):
         transactions_df = self.get_all_transaction_details()
@@ -370,7 +389,8 @@ class MyMainWindow(QMainWindow):
                         print(path_to_csv_file, 'path missing, downloading the data..')
                         symbol_ns = f"{symbol}.NS"
                         sale_date_1 = datetime.date.fromisoformat(str(end_date)) + datetime.timedelta(days=1)
-                        data = yf.download(symbol_ns, start=start_date, end=sale_date_1)
+                        data = yf.download(symbol_ns, start=start_date,
+                                           end=sale_date_1,threads=True)
                         data.to_csv(path_to_csv_file)
                         df = pd.DataFrame(pd.read_csv(path_to_csv_file))
                         for i in ['Open', 'Close', 'High', 'Low', 'Adj Close', 'Volume']:
@@ -401,7 +421,7 @@ class MyMainWindow(QMainWindow):
             print(symbol_buy_date)
             symbol, buy_date=symbol_date_split(symbol_buy_date)
             print(df.head(3).to_string())
-            # print(df)
+            print(df)
             # exit()
             df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
             start_date = pd.to_datetime(buy_date)
@@ -797,7 +817,8 @@ class MyMainWindow(QMainWindow):
             CURRENT_HOLDINGS_DB_TABLE_NAME: create_current_holdings_table_db_query(CURRENT_HOLDINGS_DB_TABLE_NAME),
             SOLD_HOLDINGS_DB_TABLE_NAME: create_sold_holdings_table_db_query(SOLD_HOLDINGS_DB_TABLE_NAME),
             BANK_TRANSACTIONS_DB_TABLE_NAME: create_transaction_table_db_query(BANK_TRANSACTIONS_DB_TABLE_NAME),
-            TOTAL_HOLDINGS_DB_TABLE_NAME: create_all_holdings_table_db_query(TOTAL_HOLDINGS_DB_TABLE_NAME)
+            TOTAL_HOLDINGS_DB_TABLE_NAME: create_all_holdings_table_db_query(TOTAL_HOLDINGS_DB_TABLE_NAME),
+            INDEX_DB_TABLE_NAME: create_indexes_table_db_query(INDEX_DB_TABLE_NAME)
         }
 
         for table in list_of_tables.keys():
@@ -909,6 +930,17 @@ class MyMainWindow(QMainWindow):
         # self.load_selected_tabs(
         #     holdings_returns_display(self.market_value_history, self.transactions_df, self.overall_holdings,
         #                          self.plot_all_returns_history, **self.db_cfg), title)
+
+    def update_stock_and_index_history(self):
+        # self.update_stock_history()
+        self.update_stock_history_multithread()
+        # symbol_df = self.get_indexes_details()
+        # # self.index_trend_data_df = self.get_indexes_details()
+        # # print(INDEX_LIST_DISPLAY)
+        # self.index_trend_data_df = symbol_df.loc[:, INDEX_LIST_DISPLAY]
+        # file_names = self.create_index_filename(self.index_trend_data_df)
+        # self.extract_current_index_history(file_names)
+
     def update_stock_history(self):
         self.backup_folder(src_path=PATH_TO_DATABASE_CURRENT_HOLDINGS, trg_path=PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP)
         data = self.total_holdings_details.read_row_by_column_values()
@@ -934,9 +966,191 @@ class MyMainWindow(QMainWindow):
                 print(symbol, path_to_csv_file)
                 data.to_csv(path_to_csv_file)
                 symbol_list.append(symbol)
+            f_count += 1
 
 
         print(f_count, "files are available")
+
+    def update_stock_history_multithread(self):
+        from threading import Thread
+
+        def y_hist(symbol_ns,start_date,end_date,path_to_csv_file):
+            try:
+                data = yf.download(symbol_ns, start=start_date, end=end_date,
+                                   group_by="ticker")
+                data.to_csv(path_to_csv_file)
+            except Exception as e:
+                data = yf.download(symbol_ns, start=start_date, end=end_date,
+                                   group_by="ticker")
+                data.to_csv(path_to_csv_file)
+                print(type(e))
+                print(repr(e))
+
+        self.backup_folder(src_path=PATH_TO_DATABASE_CURRENT_HOLDINGS,
+                           trg_path=PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP)
+        data_stock = self.total_holdings_details.read_row_by_column_values()
+        df = pd.DataFrame(data_stock)
+        mask = df["current_holding"] == True
+        symbol_df = df.loc[mask].copy()
+        ticker_list=symbol_df['equity'].tolist()[0:4]
+        ticker_buy_date=symbol_df['date'].tolist()[0:4]
+
+        print(ticker_list)
+        print(ticker_buy_date)
+        end_date=datetime.date.today()
+        start_date = end_date - datetime.timedelta(1 * 365)
+
+        threads = []
+        # for i in range(os.cpu_count()):
+        # for i in range(len(ticker_list)):
+        i=0
+        for symbol,buy_date in zip(ticker_list,ticker_buy_date):
+            print('registering thread %d' % i)
+            symbol_buy_date = symbol_date_string(symbol, buy_date)
+            # print(row.to_dict())
+            path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS,
+                                            f"{symbol_buy_date}_history.csv")
+            symbol_ns = f"{symbol}.NS"
+            threads.append(Thread(target=y_hist, args=(symbol_ns,start_date,
+                                                       end_date,path_to_csv_file,)))
+            i=i+1
+
+        for thread in threads:
+            thread.start()
+
+        return_val=[]
+        for thread in threads:
+            val= thread.join()
+            return_val.append(val)
+        print(return_val)
+
+    def update_stock_history_multi_process(self):
+        import multiprocessing as mp
+
+        def y_hist(symbol_ns, start_date, end_date, path_to_csv_file):
+            try:
+                data = yf.download(symbol_ns, start=start_date, end=end_date,
+                                   group_by="ticker")
+                                   # threads=True)
+                data.to_csv(path_to_csv_file)
+            except Exception as e:
+                data = yf.download(symbol_ns, start=start_date, end=end_date,
+                                   threads=True)
+                data.to_csv(path_to_csv_file)
+                print(type(e))
+                print(repr(e))
+
+        self.backup_folder(src_path=PATH_TO_DATABASE_CURRENT_HOLDINGS,
+                           trg_path=PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP)
+        data_stock = self.total_holdings_details.read_row_by_column_values()
+        df = pd.DataFrame(data_stock)
+        mask = df["current_holding"] == True
+        symbol_df = df.loc[mask].copy()
+        ticker_list = symbol_df['equity'].tolist()[0:4]
+        ticker_buy_date = symbol_df['date'].tolist()[0:4]
+
+        print(ticker_list)
+        print(ticker_buy_date)
+        end_date = datetime.date.today()
+        start_date = end_date - datetime.timedelta(1 * 365)
+
+        threads = []
+        # for i in range(os.cpu_count()):
+        # for i in range(len(ticker_list)):
+        mp.set_start_method('spawn')
+        q = mp.Queue()
+        i = 0
+        for symbol, buy_date in zip(ticker_list, ticker_buy_date):
+            print('registering thread %d' % i)
+            symbol_buy_date = symbol_date_string(symbol, buy_date)
+            # print(row.to_dict())
+            path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS,
+                                            f"{symbol_buy_date}_history.csv")
+            symbol_ns = f"{symbol}.NS"
+            threads.append(mp.Process(target=y_hist, args=(symbol_ns, start_date,
+                                                       end_date,
+                                                       path_to_csv_file,)))
+            i = i + 1
+
+        for thread in threads:
+            thread.start()
+
+        return_val = []
+        for thread in threads:
+            val = thread.join()
+            return_val.append(val)
+        print(return_val)
+
+    def create_index_filename(self, index_trend_data_df):
+        # return get_current_holdings_history(self.current_holding_data_df)
+        self.backup_folder(src_path=PATH_TO_DATABASE_CURRENT_INDEX,
+                           trg_path=PATH_TO_DATABASE_INDEX_BKP)
+        current_holdings_csv_file_names = create_current_index_csv_file_names(
+            index_trend_data_df)
+        return current_holdings_csv_file_names
+        # return get_current_holdings_history_mp(current_holdings_csv_file_names)
+
+    def extract_current_index_history(self, holdings_csv_file_names):
+        # https://stackoverflow.com/questions/62130801/parallel-processing-in-python-to-fill-a-dictionary-with-the-value-as-a-dictionar
+        # from multiprocessing import Process, Manager
+        current_holding_history = make_nested_dict()
+
+        # current_holdings_csv_file_names = create_current_holdings_csv_file_names(current_holding_data_df)
+
+        def csv_file_read(filename):
+            f = pd.read_csv(filename)
+            return f
+
+        def download_and_read_csv(symbol, filename):
+            # data = yf.download(symbol_ns, threads=True)
+            # print(symbol)
+            # print(filename)
+            data = yf.download(symbol)
+            data.to_csv(filename)
+            f = csv_file_read(filename)
+            return f
+
+        def compile_stock_data(result):
+            df = pd.DataFrame(result)
+            mask = df['Date'] > str(deltatime)
+            for i in ['Open', 'Close', 'High', 'Low', 'Adj Close', 'Volume']:
+                df[i] = df[i].astype('float64')
+            df = df.loc[mask].copy()
+            current_holding_history[symbol_buy_date] = reduce_mem_usage(df)
+
+        # pool = Pool(processes=6)
+        jobs = []
+        deltatime = datetime.date.today() - datetime.timedelta(5 * 365)
+        for symbol_buy_date, path_to_csv_file in holdings_csv_file_names.items():
+
+            if os.path.isfile(path_to_csv_file):
+                csv_data = csv_file_read(path_to_csv_file)
+                compile_stock_data(csv_data)
+                # process=multiprocessing.Process(target=compile_stock_data,args=(csv_data))
+                # jobs.append(process)
+                # pool.apply_async(csv_file_read, args=(path_to_csv_file,), callback=compile_stock_data)
+            else:
+                print(path_to_csv_file, 'path missing')
+                symbol, buy_date = symbol_date_split(symbol_buy_date)
+                symbol_ns = f"{INDEX_NAME_DICT[symbol]}"
+                csv_data = download_and_read_csv(symbol_ns, path_to_csv_file)
+                compile_stock_data(csv_data)
+                # process = multiprocessing.Process(target=compile_stock_data, args=(csv_data))
+                # jobs.append(process)
+
+                # pool.apply_async(download_and_read_csv, args=(symbol_ns,path_to_csv_file,), callback=compile_stock_data)
+
+        # # Start the processes (i.e. calculate the random number lists)
+        # for j in jobs:
+        #     j.start()
+        #
+        # # Ensure all of the processes have finished
+        # for j in jobs:
+        #     j.join()
+
+        # pool.close()
+        # pool.join()
+        return current_holding_history
 
 
     def update_sold_stock_history(self):
@@ -1005,7 +1219,7 @@ class MyMainWindow(QMainWindow):
                 # for hname in header_list:
                 #     data[hname] = (data[hname] - float(buy_price)) * float(quantity)
 
-                data.head(4).to_string()
+                # data.head(4).to_string()
 
                 # print(symbol, path_to_csv_file)
                 data.to_csv(path_to_csv_file)
@@ -1100,6 +1314,13 @@ class MyMainWindow(QMainWindow):
         tb = self.addToolBar("Tool Bar")
         tb.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
+        trend_sheet = QAction(QIcon("icons/docu.png"), "Index", self)
+        trend_sheet.triggered.connect(self.indexes_trend)
+        trend_sheet.setStatusTip("Plot trend of a stock")
+        trend_sheet.setToolTip("Plot trend of a stock")
+        tb.addAction(trend_sheet)
+        tb.addSeparator()
+
         tb.addSeparator()
         holdings_tab = QAction(QIcon("icons/db_add.png"), "Holdings", self)
         holdings_tab.triggered.connect(self.holdings_tab)
@@ -1130,7 +1351,7 @@ class MyMainWindow(QMainWindow):
         # tb.addSeparator()
 
         load_casesheet = QAction(QIcon("icons/download_internet.png"), "Update", self)
-        load_casesheet.triggered.connect(self.update_stock_history)
+        load_casesheet.triggered.connect(self.update_stock_and_index_history)
         load_casesheet.setStatusTip("Update latest stock history")
         load_casesheet.setToolTip("Update latest stock history ")
         tb.addAction(load_casesheet)
@@ -1145,6 +1366,16 @@ class MyMainWindow(QMainWindow):
         trend_sheet.setToolTip("Plot trend of a stock")
         tb.addAction(trend_sheet)
         tb.addSeparator()
+
+
+
+        delShare = QAction(QIcon("icons/emblem-money.png"), "Bank \nTransaction", self)
+        delShare.triggered.connect(self.bank_transaction)
+        delShare.setStatusTip("Removing stock from list")
+        delShare.setToolTip("Removing stock from list")
+        tb.addAction(delShare)
+        tb.addSeparator()
+
 
         import_data = QAction(QIcon("icons/document-import.png"), "Import", self)
         import_data.triggered.connect(self.call_import_csv_to_mysql)
@@ -1215,11 +1446,22 @@ class MyMainWindow(QMainWindow):
         tb.addAction(quit_app)
         tb.addSeparator()
 
+
+
+    def indexes_trend(self):
+        title = f"Index Trend: {datetime.date.today()}"
+        self.tabs_selected[title] = True
+        # print(self.db_cfg)
+        self.load_selected_tabs(indexes_display(**self.db_cfg), title)
+
     def stock_trend(self):
         title = f"Super Trend: {datetime.date.today()}"
         self.tabs_selected[title] = True
         self.load_selected_tabs(stock_super_trend_display(**self.db_cfg), title)
 
+    def bank_transaction(self):
+        trans=bank_transactions_details(**self.db_cfg)
+        trans.exec_()
 
     def mysql_login_info0(self):
         self.mysql_login_info(close_now=self.close_now)
@@ -1421,7 +1663,7 @@ def main():
 
 def custom_excepthook(exc_type, exc_value, exc_traceback):
     # https: // stackoverflow.com / questions / 6234405 / logging_exception_hook - uncaught - exceptions - in -python
-    from logging_exception_hook.my_logger import setup_log, clearlogger
+    from logging_exception_hook.my_logger import setup_log
     import traceback
 
     logging = setup_log()

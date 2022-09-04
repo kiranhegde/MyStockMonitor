@@ -1,6 +1,7 @@
 # mysql db info
 MYSQL_DB_NAME = "stock_database_new"
 TOTAL_HOLDINGS_DB_TABLE_NAME = "total_holdings_new"
+INDEX_DB_TABLE_NAME = "indexes_table"
 TOTAL_HOLDINGS_DB_TABLE_NAME_test = "total_holdings_test"
 CURRENT_HOLDINGS_DB_TABLE_NAME = "current_holdings"
 SOLD_HOLDINGS_DB_TABLE_NAME = "sold_out_holdings"
@@ -11,6 +12,17 @@ DEFAULTS = "defaults_values"
 
 TRADE_TYPE = ["Buy", "Sell"]
 
+INDEX_NAME_DICT={"NIFTY50":"^NSEI",
+                  "NIFTYBANK":"^NSEBANK",
+                  "NIFTYIT":"^CNXIT",
+                  "INDIAVIX":"^INDIAVIX",
+                  "NIFTYPHARMA":"^CNXPHARMA",
+                  "NIFTYMETAL":"^CNXMETAL",
+                  "NIFTYFMCG":"^CNXFMCG",
+                  "NIFTYENERGY":"^CNXENERGY",
+                  "NIFTYAUTO": "^CNXAUTO"
+                 }
+
 # # mysql table header names
 # TOTAL_HOLDINGS_DB_HEADER = ['id', 'ref_number', 'date', 'type', 'agency', 'exchange', 'equity', 'quantity', 'price',
 #                             'fees', 'avg_price', 'remarks']
@@ -20,6 +32,7 @@ TRADE_TYPE = ["Buy", "Sell"]
 # TOTAL_HOLDINGS_CALC_HEADER = TOTAL_HOLDINGS_DB_HEADER + TOTAL_HOLDINGS_EXTRA_HEADER
 
 # mysql table header names
+INDEXES_DB_HEADER = ['id','ref_number','from_date','indice_name','remarks']
 TOTAL_HOLDINGS_DB_HEADER = ['id', 'ref_number', 'date', 'type', 'agency', 'equity', 'quantity', 'price',
                             'fees', 'avg_price', 'current_holding', 'remarks']
 TOTAL_HOLDINGS_EXTRA_HEADER = ['transact_val', 'cashflow', 'prev_units', 'cml_units', 'prev_cost',
@@ -30,6 +43,18 @@ TOTAL_HOLDINGS_CALC_HEADER = TOTAL_HOLDINGS_DB_HEADER + TOTAL_HOLDINGS_EXTRA_HEA
 TOTAL_HOLDINGS_HEADER_NAME = ["ID", "Reference", "Date", "Type", "Agency", "Equity", "Quantity", "Price", "Fees",
                               "AvgPrice", 'CurrentHoldings', "Remarks", "TransactionValue", 'CashFlow', 'PrevUnits',
                               'CummUnits', 'PrevCosts','CummCosts','GainLoss','Yield']
+
+
+INDEX_HEADER_NAME=['ID','Reference','From_Date','Indice_Name','Remarks']
+INDEX_LIST_DISPLAY=['from_date','indice_name']
+INDEX_DB_TO_DISPLAY = dict(zip(INDEXES_DB_HEADER, INDEX_HEADER_NAME))
+
+# list of header name to be retained
+INDEX_HEADER_DISPLAY_LIST = []
+for hdr_name in INDEX_LIST_DISPLAY:
+    INDEX_HEADER_DISPLAY_LIST.append(INDEX_DB_TO_DISPLAY[hdr_name])
+
+# print(INDEX_HEADER_DISPLAY_LIST)
 
 
 # CURRENT_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'avg_price', 'quantity',
@@ -85,6 +110,7 @@ SOLD_HOLDING_DB_TO_DISPLAY = dict(zip(SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_HEAD
 
 # bank transactions
 BANK_TRANSACTIONS_HEADER = ['ID', "Agency", "Date", "Reference_no", "Amount", "From_Bank", "To_Bank", "Remarks"]
+BANK_TRANSACTIONS_DISPLAY = ['id','agency', 'transaction_date','transaction_id', 'amount', 'from_bank','to_bank', 'remarks']
 BANK_TRANSACTIONS_LIST_DISPLAY = ["agency", 'transaction_date', 'amount']
 BANK_TRANSACTIONS_DB_TO_DISPLAY = dict(zip(BANK_TRANSACTIONS_DB_HEADER, BANK_TRANSACTIONS_HEADER))
 
@@ -185,6 +211,19 @@ def create_all_holdings_table_db_query(tablename):
     return create_current_holdings_table
 
 def create_indices_table_db_query(tablename):
+    create_indices_table = """
+              CREATE TABLE  IF NOT EXISTS %s (     
+              id INT AUTO_INCREMENT  PRIMARY KEY,       
+              ref_number INT NOT NULL,
+              from_date DATE NOT NULL,             
+              indice_name TEXT NOT NULL,  
+              remarks TEXT
+              ) ;
+              """ % tablename
+    return create_indices_table
+
+
+def create_indexes_table_db_query(tablename):
     create_indices_table = """
               CREATE TABLE  IF NOT EXISTS %s (     
               id INT AUTO_INCREMENT  PRIMARY KEY,       

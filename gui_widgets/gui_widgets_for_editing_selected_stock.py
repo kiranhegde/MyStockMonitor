@@ -10,10 +10,10 @@ import datetime
 #     DATE_TIME, DATE_TIME1, \
 #     PAYIN_KEY_PHARMACY, PAYOUT_KEY_PHARMACY, PAYIN_DEPARTMENT_PHARMACY, PAY_TYPE_PHARMACY1, \
 #     PAY_TYPE_PHARMACY2
-
+import pandas as pd
 from utility.utility_functions import make_nested_dict, parse_str
-from utility.libnames import AGENCY_LIST, EXCHANGE_LIST
-from utility.date_time import DATE_TIME1,DATE_FMT_DMY
+from utility.libnames import AGENCY_LIST, EXCHANGE_LIST,TRADE_TYPE_BUY
+from utility.date_time import DATE_TIME1,DATE_FMT_DMY,DATE_TIME
 from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
 
 
@@ -23,7 +23,7 @@ class edit_selected_stock(QDialog):
     def __init__(self, stock_data, dbsave=False, parent=None):
         super(edit_selected_stock, self).__init__(parent)
         self.setWindowModality(Qt.ApplicationModal)
-        self.setWindowTitle("Edit stock")
+        self.setWindowTitle("Edit transaction")
         # self.ref_no = ref_no
         # self.new_stock_addition = new_stock_addition
         self.stock_data = stock_data
@@ -50,15 +50,17 @@ class edit_selected_stock(QDialog):
         self.agency = self.stock_data['agency']
         self.equity = self.stock_data['equity']
         self.buy_date = self.stock_data['date']
+        self.trade_type = self.stock_data['type']
         self.price = str(self.stock_data['price'])
         self.quantity = str(self.stock_data['quantity'])
         self.charges = str(self.stock_data['fees'])
         self.comment = self.stock_data['remarks']
 
+
     def widgets(self):
         self.save_db = False
         self.titleText = QLabel("Add New stock")
-        self.agencyEntry = QLineEdit()
+        # self.agencyEntry = QLineEdit()
         self.agencyEntry = QComboBox()
         self.agencyEntry.addItems(AGENCY_LIST)
         if self.agency in AGENCY_LIST:
@@ -89,6 +91,12 @@ class edit_selected_stock(QDialog):
         # self.trade_priceEntry.setText("0.00")
         self.trade_priceEntry.textChanged.connect(self.check_price)
         self.trade_priceEntry.setText(self.price)
+
+        self.tradeTypeEntry = QComboBox()
+        self.tradeTypeEntry.addItems(TRADE_TYPE_BUY)
+        if self.trade_type in TRADE_TYPE_BUY:
+            indx = self.tradeTypeEntry.findText(self.trade_type)
+            self.tradeTypeEntry.setCurrentIndex(indx)
 
         self.quantityEntry = QLineEdit()
         self.quantityEntry.setText(self.quantity)
@@ -185,10 +193,12 @@ class edit_selected_stock(QDialog):
         agency = self.agencyEntry.currentText()
         # xchange = self.exchangeEntry.currentText()
         equity = self.equityEntry.text()
+        # self.trade_dateEntry.setDisplayFormat(DATE_TIME)
         tdate = self.trade_dateEntry.text()
         price = self.trade_priceEntry.text()
         quantity = self.quantityEntry.text()
         chargesEntry = self.chargesEntry.text()
+        tradetype = self.tradeTypeEntry.currentText()
 
         if price == "":
             QMessageBox.critical(self, " Stock price missing !!!",
@@ -213,11 +223,13 @@ class edit_selected_stock(QDialog):
         # dateNow = str(QDateTime.currentDateTime().toString(DATE_TIME))
         edit_stock_details['id'] = 0
         edit_stock_details['ref_number'] = self.ref_number
-        date_time = datetime.datetime.strptime(tdate, DATE_FMT_DMY)
-        edit_stock_details['date'] = date_time.date()
-        edit_stock_details['type'] = TRADE_TYPE[0]
+        # date_time = datetime.datetime.strptime(tdate, DATE_FMT_DMY)
+        # edit_stock_details['date'] = date_time.date()
+        edit_stock_details['date'] = pd.to_datetime(tdate,format=DATE_FMT_DMY)
+        # edit_stock_details['type'] = TRADE_TYPE[0]
+        edit_stock_details['type'] = tradetype
         edit_stock_details['agency'] = agency
-        edit_stock_details['equity'] = equity
+        edit_stock_details['equity'] = equity.upper()
         edit_stock_details['quantity'] = quantity
         edit_stock_details['price'] = float(price)
         edit_stock_details['fees'] = chargesEntry
@@ -260,6 +272,7 @@ class edit_selected_stock(QDialog):
         # self.topLayout.addRow(QLabel("Exchange: "), self.exchangeEntry)
         self.topLayout.addRow(QLabel("Equity: "), self.equityEntry)
         self.topLayout.addRow(QLabel("Trade Date: "), self.trade_dateEntry)
+        self.topLayout.addRow(QLabel("Trade Type: "), self.tradeTypeEntry)
         self.topLayout.addRow(QLabel("Price: "), self.trade_priceEntry)
         self.topLayout.addRow(QLabel("Quantity: "), self.quantityEntry)
         self.topLayout.addRow(QLabel("Charges (if any): "), self.chargesEntry)

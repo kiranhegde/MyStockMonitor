@@ -3,7 +3,8 @@ import pandas as pd
 from PyQt5 import QtWebEngineWidgets
 from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QTimer, QDateTime
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, QLabel, QMessageBox, \
+from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, \
+    QLabel, QMessageBox, \
     QVBoxLayout, QHBoxLayout, QGroupBox, \
     QGridLayout, QAbstractItemView, \
     QHeaderView, QSplitter, QFileDialog
@@ -12,14 +13,17 @@ from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, QL
 import datetime
 import yfinance as yf
 
-
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME,  \
-    SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
+from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, \
+    SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, \
+    BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
 from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS
-from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, CURRENT_HOLDING_DB_TO_DISPLAY, \
-    SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, BANK_TRANSACTIONS_LIST_DISPLAY, \
-    BANK_TRANSACTIONS_DB_TO_DISPLAY,TOTAL_HOLDINGS_DB_TABLE_NAME,TOTAL_HOLDINGS_DB_HEADER
+from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
+    CURRENT_HOLDING_DB_TO_DISPLAY, \
+    SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, \
+    BANK_TRANSACTIONS_LIST_DISPLAY, \
+    BANK_TRANSACTIONS_DB_TO_DISPLAY, TOTAL_HOLDINGS_DB_TABLE_NAME, \
+    TOTAL_HOLDINGS_DB_HEADER
 
 # from DataBase.label_names import HEADER_PHARMACY_PAYIN, \
 #     DEBIT_TITLE, SAMPLE_TABLE_MEDICAL, DATE_FMT_DMY, DATE_FMT_YMD, \
@@ -42,13 +46,18 @@ import os
 # from DataBase.mysql_crud import mysql_table_crud
 from utility.tableViewModel import pandasModel
 from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
-from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_CALC_HEADER,TOTAL_HOLDINGS_EXTRA_HEADER
-from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id,\
-    symbol_date_string,create_current_holdings_csv_file_names,create_sold_holdings_csv_file_names,symbol_date_split,\
-    create_current_holdings_csv_file_names,make_nested_dict
+from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_CALC_HEADER, \
+    TOTAL_HOLDINGS_EXTRA_HEADER
+from utility.utility_functions import reduce_mem_usage, \
+    symbol_date_range_string, date_symbol_split, gen_id, \
+    symbol_date_string, create_current_holdings_csv_file_names, \
+    create_sold_holdings_csv_file_names, symbol_date_split, \
+    create_current_holdings_csv_file_names, make_nested_dict
 from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
+from utility.libnames import TRADE_TYPE_SELL, TRADE_TYPE_BUY
 
-from display_tabs.utility_display_tab import get_current_holdings_history,get_sold_holdings_history,get_current_holdings_history_mp
+from display_tabs.utility_display_tab import get_current_holdings_history, \
+    get_sold_holdings_history, get_current_holdings_history_mp
 
 from os.path import expanduser
 
@@ -62,7 +71,7 @@ DEFAULT_PATH = f"{usr_path}/Desktop/"
 
 
 class holdings_returns_display(QWidget):
-    def __init__(self, plot_all_returns_history,**mysql_data):
+    def __init__(self, plot_all_returns_history, **mysql_data):
         super().__init__()
         # self.setWindowTitle("Balance test")
         # self.usr = usr
@@ -79,13 +88,17 @@ class holdings_returns_display(QWidget):
 
         self.transactions_detail_df = self.transaction_history()
         self.overall_holdings = self.get_overall_holdings_details()
-        print(self.overall_holdings.to_string())
-        # mask = self.overall_holdings['equity'] == "ADANIGREEN"
+        screen_print = self.overall_holdings.copy()
+        drop_list_of_columns = ['current_holding', 'ref_number']
+        screen_print.drop(drop_list_of_columns, axis=1, inplace=True)
+        print(screen_print.to_string())
+        # mask = self.overall_holdings['equity'] == "AFFLE"
         # df=self.overall_holdings[mask].copy()
         # df.sort_values(by="date", ascending=True, inplace=True)
+        # print("Final:")
         # print(df.to_string())
         # exit()
-        self.market_value_history=self.overall_return()
+        self.market_value_history = self.overall_return()
         # self.overall_holdings = self.get_all_holdings_info()
         # self.overall_return_history()
         # exit()
@@ -93,13 +106,15 @@ class holdings_returns_display(QWidget):
         self.layouts()
 
     def connect_to_tables(self):
-        self.transctions_details = mysql_table_crud(db_table=BANK_TRANSACTIONS_DB_TABLE_NAME,
-                                                    db_header=BANK_TRANSACTIONS_DB_HEADER,
-                                                    **self.db_cfg)
+        self.transctions_details = mysql_table_crud(
+            db_table=BANK_TRANSACTIONS_DB_TABLE_NAME,
+            db_header=BANK_TRANSACTIONS_DB_HEADER,
+            **self.db_cfg)
 
-        self.total_holdings_details = mysql_table_crud(db_table=TOTAL_HOLDINGS_DB_TABLE_NAME,
-                                                       db_header=TOTAL_HOLDINGS_DB_HEADER,
-                                                           **self.db_cfg)
+        self.total_holdings_details = mysql_table_crud(
+            db_table=TOTAL_HOLDINGS_DB_TABLE_NAME,
+            db_header=TOTAL_HOLDINGS_DB_HEADER,
+            **self.db_cfg)
 
     def transaction_history(self):
         transactions_df = self.get_all_transaction_details()
@@ -115,18 +130,24 @@ class holdings_returns_display(QWidget):
         df.rename_axis("Date", inplace=True)
         df.drop(["Date", 'Agency'], axis=1, inplace=True)
         df.reset_index(inplace=True)
-        transactions_df = pd.concat([transactions_df, df]).groupby(['Date']).sum().reset_index()
-        transactions_df['Cumulative_Amount'] = transactions_df['Amount'].cumsum()
+        transactions_df = pd.concat([transactions_df, df]).groupby(
+            ['Date']).sum().reset_index()
+        transactions_df['Cumulative_Amount'] = transactions_df[
+            'Amount'].cumsum()
 
         return transactions_df
 
     def get_overall_holdings_details(self):
-        data = self.total_holdings_details.read_row_by_column_values(order="order by date asc")
+        data = self.total_holdings_details.read_row_by_column_values(
+            order="order by date asc")
         all_holding_df = pd.DataFrame(data)
         # reading only current holdings
         all_holding_df.sort_values(by=['equity'], ascending=True, inplace=True)
         # adding fees per stock
-        all_holding_df.loc[:, 'price'] = all_holding_df.loc[:, 'price'] + all_holding_df.loc[:, 'fees'] / all_holding_df.loc[:, 'quantity']
+        all_holding_df.loc[:, 'price'] = all_holding_df.loc[:,
+                                         'price'] + all_holding_df.loc[:,
+                                                    'fees'] / all_holding_df.loc[
+                                                              :, 'quantity']
         ticker_list = all_holding_df['equity'].to_list()
         ticker_list = sorted(list(set(ticker_list)))
 
@@ -136,9 +157,16 @@ class holdings_returns_display(QWidget):
 
         i = 0
         for ticker in ticker_list:
+            # if ticker == "AFFLE":
             i += 1
-            mask = all_holding_df['equity'] == ticker
-            calc_df = self.calc_overall_trading_summary(all_holding_df[mask].copy())
+            mask_equity = all_holding_df['equity'] == ticker
+            # mask non-intraday
+            mask_intraday1 = all_holding_df['type'] == TRADE_TYPE_BUY[0]
+            mask_intraday2 = all_holding_df['type'] == TRADE_TYPE_SELL[0]
+            mask = mask_equity & (mask_intraday1 | mask_intraday2)
+
+            calc_df = self.calc_overall_trading_summary(
+                all_holding_df[mask].copy())
 
             for idx, row in calc_df.iterrows():
                 mask_row = all_holding_df['ref_number'] == row['ref_number']
@@ -146,9 +174,23 @@ class holdings_returns_display(QWidget):
                     all_holding_df.loc[mask_row, col] = row[col]
                 all_holding_df.loc[mask_row, 'avg_price'] = row['avg_price']
 
+            # mask intraday
+            mask_intraday1 = all_holding_df['type'] == TRADE_TYPE_BUY[1]
+            mask_intraday2 = all_holding_df['type'] == TRADE_TYPE_SELL[2]
+            mask = mask_equity & (mask_intraday1 | mask_intraday2)
+            is_intraday = False
+            calc_df, is_intraday = self.calc_overall_trading_summary_intraday(
+                all_holding_df[mask].copy())
+            if is_intraday:
+                for idx, row in calc_df.iterrows():
+                    mask_row = all_holding_df['ref_number'] == row['ref_number']
+                    for col in TOTAL_HOLDINGS_EXTRA_HEADER:
+                        all_holding_df.loc[mask_row, col] = row[col]
+                    all_holding_df.loc[mask_row, 'avg_price'] = row['avg_price']
+
         all_holding_df.sort_values(by=['date'], ascending=True, inplace=True)
         # drop_columns = ['id', 'remarks', 'ref_number', 'agency']
-        drop_columns = ['id', 'remarks','agency']
+        drop_columns = ['id', 'remarks', 'agency']
         all_holding_df.drop(drop_columns, axis=1, inplace=True)
         all_holding_df['cml_gain_loss'] = all_holding_df['gain_loss'].cumsum()
 
@@ -162,10 +204,10 @@ class holdings_returns_display(QWidget):
     def calc_overall_trading_summary(self, df):
         df = df.sort_values(by=['date'], ascending=True).copy()
         # print(df.to_string())
-        # df.loc[:, 'price'] = df.loc[:, 'price']+ df.loc[:, 'fees'] / df.loc[:, 'quantity']
         df.loc[:, 'transact_val'] = df.loc[:, 'quantity'] * df.loc[:, 'price']
-
-        value_list = {'quantity': 0, 'price':0,'cml_units': 0, 'prev_cost': 0, 'transact_val': 0, 'cml_cost': 0, 'avg_price': 0}
+        # df.loc[:, 'price'] = df.loc[:, 'price']+ df.loc[:, 'fees'] / df.loc[:, 'quantity']
+        value_list = {'quantity': 0, 'price': 0, 'cml_units': 0, 'prev_cost': 0,
+                      'transact_val': 0, 'cml_cost': 0, 'avg_price': 0}
         i = 0
         for idx, row in df.iterrows():
             date = row['date']
@@ -179,6 +221,7 @@ class holdings_returns_display(QWidget):
             # prev_cost = row['prev_cost']
 
             if i == 0:
+                # avg_price = row['avg_price']
                 df.loc[idx, ('prev_units')] = 0
                 df.loc[idx, ('cml_units')] = quantity
 
@@ -188,9 +231,9 @@ class holdings_returns_display(QWidget):
 
                 df.loc[idx, ('cml_cost')] = transact_val
                 df.loc[idx, ('prev_cost')] = 0
-                if type == "Buy":
+                if type == TRADE_TYPE_BUY[0]:
                     df.loc[idx, ('cashflow')] = -transact_val
-                if type == "Sale":
+                if type == TRADE_TYPE_SELL[0]:
                     df.loc[idx, ('cashflow')] = transact_val
 
                 value_list['quantity'] = quantity
@@ -206,7 +249,7 @@ class holdings_returns_display(QWidget):
                 df.loc[idx, ('prev_units')] = prev_unit_new
 
                 # print(value_list)
-                if type == "Buy":
+                if type == TRADE_TYPE_BUY[0]:
                     cml_units_new = value_list['cml_units'] + quantity
                     prev_cost_new = value_list['avg_price'] * prev_unit_new
                     cml_cost_new = avg_price * cml_units_new
@@ -224,7 +267,7 @@ class holdings_returns_display(QWidget):
                     value_list['quantity'] = prev_unit_new + quantity
                     value_list['avg_price'] = avg_price
 
-                if type == "Sell":
+                if type == TRADE_TYPE_SELL[0]:
                     cml_units_new = value_list['cml_units'] - quantity
                     prev_cost_new = value_list['avg_price'] * prev_unit_new
                     cml_cost_new = avg_price * cml_units_new
@@ -247,7 +290,8 @@ class holdings_returns_display(QWidget):
 
         # print(df.to_string())
         # calculating avg. cum val data
-        value_list = { 'prev_units': 0, 'cml_units': 0,'avg_price': 0}
+        value_list = {'prev_units': 0, 'cml_units': 0, 'avg_price': 0,
+                      'prev_cost': 0.0, 'cml_cost': 0.0}
         i = 0
         for idx, row in df.iterrows():
             date = row['date']
@@ -259,31 +303,37 @@ class holdings_returns_display(QWidget):
             avg_price = row['avg_price']
 
             if i == 0:
-                value_list['prev_units'] = prev_units
-                value_list['cml_units'] = cml_units
+                value_list['prev_units'] = 0.0
+                value_list['cml_units'] = quantity
                 value_list['avg_price'] = avg_price
+                value_list['prev_cost'] = 0.0
+                value_list['cml_cost'] = quantity * avg_price
             else:
                 # print(value_list)
-                if type == "Buy":
+                if type == TRADE_TYPE_BUY[0]:
+                    # print(type)
                     cml_units_old = value_list['cml_units']
                     # prev_units_old = value_list['prev_units']
                     avg_price_old = value_list['avg_price']
 
-                    nr=cml_units_old*avg_price_old+quantity*price
-                    dr=cml_units_old+quantity
-                    avg_price = nr/dr
-                    cml_cost_new = avg_price*cml_units
-                    prev_cost_new = avg_price_old*prev_units
+                    nr = cml_units_old * avg_price_old + quantity * price
+                    dr = cml_units_old + quantity
+                    avg_price = nr / dr
+                    cml_cost_new = avg_price * cml_units
+                    prev_cost_new = avg_price_old * prev_units
 
-                    df.loc[idx, ('prev_cost')] = prev_cost_new
+                    df.loc[idx, ('prev_cost')] = value_list[
+                        'cml_cost']  # prev_cost_new
                     df.loc[idx, ('cml_cost')] = cml_cost_new
                     df.loc[idx, ('avg_price')] = avg_price
 
                     value_list['prev_units'] = prev_units
                     value_list['cml_units'] = cml_units
                     value_list['avg_price'] = avg_price
+                    value_list['cml_cost'] = cml_cost_new
 
-                if type == "Sell":
+                if type == TRADE_TYPE_SELL[0]:
+                    # print(type)
                     cml_units_old = value_list['cml_units']
                     # prev_units_old = value_list['prev_units']
                     avg_price_old = value_list['avg_price']
@@ -291,32 +341,111 @@ class holdings_returns_display(QWidget):
                     cml_cost_new = avg_price * cml_units
                     prev_cost_new = avg_price_old * prev_units
 
-                    df.loc[idx, ('prev_cost')] = prev_cost_new
+                    df.loc[idx, ('prev_cost')] = value_list[
+                        'cml_cost']  # prev_cost_new
                     df.loc[idx, ('cml_cost')] = cml_cost_new
                     df.loc[idx, ('avg_price')] = avg_price
 
                     value_list['prev_units'] = prev_units
                     value_list['cml_units'] = cml_units
                     value_list['avg_price'] = avg_price
+                    value_list['cml_cost'] = cml_cost_new
 
                     df.loc[idx, ('gain_loss')] = quantity * (price - avg_price)
                     df.loc[idx, ('yield')] = price / avg_price - 1.0
             i += 1
 
         # print(df.to_string())
-
         # print("-------->")
         # print(df.to_string())
         # exit()
         return df
 
-    def extract_current_holdings_history(self,current_holding_data_df):
+    def calc_overall_trading_summary_intraday(self, df):
+        df.loc[:, 'transact_val'] = df.loc[:, 'quantity'] * df.loc[:, 'price']
+        mask_intraday1 = df['type'] == TRADE_TYPE_BUY[1]
+        mask_intraday2 = df['type'] == TRADE_TYPE_SELL[2]
+        mask = mask_intraday1 | mask_intraday2
+        df_intrday = df.loc[mask].copy()
+        if len(df_intrday) == 0:
+            return None, False
+
+        # print("intraday..")
+        # print(df_intrday.to_string())
+        # df1 = df.loc[~mask].copy()
+        # print(df1.to_string())
+        value_list = {'prev_units': 0, 'cml_units': 0, 'avg_price': 0,
+                      'prev_cost': 0.0, 'cml_cost': 0.0}
+
+        df_buy = df.loc[mask_intraday1].copy()
+        df_sell = df.loc[mask_intraday2].copy()
+        quantity = int(df_buy['quantity'])
+        transact_val = float(df_buy['transact_val'])
+
+        df_buy['cashflow'] = -transact_val
+        df_buy['cml_units'] = quantity
+        df_buy['cml_cost'] = transact_val
+
+        avg_buy_price = float(df_buy['avg_price'])
+        df_sell['avg_price'] = avg_buy_price
+        df_sell['cashflow'] = transact_val
+        df_sell['prev_units'] = quantity
+        df_sell['prev_cost'] = transact_val
+        df_sell['cml_cost'] = 0.0
+        price = float(df_sell['price'])
+        df_sell['gain_loss'] = quantity * (price - avg_buy_price)
+        df_sell['yield'] = (price / avg_buy_price - 1.0)
+
+        df_buy_sell = pd.concat([df_buy, df_sell], axis=0)
+        # print(df_buy_sell.to_string())
+
+        # i = 0
+        # for idx, row in df_intrday.iterrows():
+        #     date = row['date']
+        #     type = row['type']
+        #     quantity = row['quantity']
+        #     transact_val = row['transact_val']
+        #     avg_price = row['avg_price']
+        #     # print(date,type,quantity,transact_val,avg_price)
+        #
+        #     if type == TRADE_TYPE_BUY[1]:
+        #         df_intrday.loc[idx, ('cashflow')] = -transact_val
+        #         df_intrday.loc[idx, ('prev_cost')] = 0.0
+        #         df_intrday.loc[idx, ('cml_cost')] = transact_val
+        #         df_intrday.loc[idx, ('gain_loss')] = 0.0
+        #         df_intrday.loc[idx, ('yield')] = 0.0
+        #         df_intrday.loc[idx, ('cml_gain_loss')] = 0.0
+        #         df_intrday.loc[idx, ('prev_units')] = 0.0
+        #         df_intrday.loc[idx, ('cml_units')] = quantity
+        #
+        #         value_list['prev_units'] = 0
+        #         value_list['cml_units'] = quantity
+        #         value_list['avg_price'] = avg_price
+        #         value_list['prev_cost'] = 0.0
+        #         value_list['cml_cost'] = quantity * avg_price
+        #
+        #
+        #     if type == TRADE_TYPE_SELL[1]:
+        #         df_intrday.loc[idx, ('cashflow')] = transact_val
+        #         df_intrday.loc[idx, ('prev_cost')] = value_list['cml_cost']
+        #         df_intrday.loc[idx, ('cml_cost')] = 0
+        #         df_intrday.loc[idx, ('gain_loss')] = 0.0
+        #         df_intrday.loc[idx, ('yield')] = 0.0
+        #         df_intrday.loc[idx, ('cml_gain_loss')] = 0.0
+        #         df_intrday.loc[idx, ('prev_units')] = 0.0
+        #         df_intrday.loc[idx, ('cml_units')] = 0
+
+        return df_buy_sell, True
+
+    def extract_current_holdings_history(self, current_holding_data_df):
         # return get_current_holdings_history(current_holding_data_df)
-        current_holdings_csv_file_names = create_current_holdings_csv_file_names(current_holding_data_df)
+        current_holdings_csv_file_names = create_current_holdings_csv_file_names(
+            current_holding_data_df)
         return get_current_holdings_history_mp(current_holdings_csv_file_names)
 
-    def extract_sold_holdings_history(self,sold_holding_data_df):
-        sold_holdings_csv_file_names = create_current_holdings_csv_file_names(sold_holding_data_df)
+    def extract_sold_holdings_history(self, sold_holding_data_df):
+        sold_holdings_csv_file_names = create_current_holdings_csv_file_names(
+            sold_holding_data_df)
         return get_sold_holdings_history(sold_holdings_csv_file_names)
         # return get_sold_holdings_history(sold_holding_data_df)
 
@@ -324,14 +453,15 @@ class holdings_returns_display(QWidget):
         market_value_history = pd.DataFrame()
         mask = self.overall_holdings["current_holding"] == True
         current_holding_data_df = self.overall_holdings.loc[mask].copy()
-        current_holding_history = self.extract_current_holdings_history(current_holding_data_df)
+        current_holding_history = self.extract_current_holdings_history(
+            current_holding_data_df)
 
         for idx, row in current_holding_data_df.iterrows():
-            symbol=row['equity']
+            symbol = row['equity']
             buy_date = row['date']
             quantity = int(row['quantity'])
-            symbol_buy_date=symbol_date_string(symbol,buy_date)
-            df=current_holding_history[symbol_buy_date]
+            symbol_buy_date = symbol_date_string(symbol, buy_date)
+            df = current_holding_history[symbol_buy_date]
 
             df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
             start_date = pd.to_datetime(buy_date)
@@ -344,25 +474,29 @@ class holdings_returns_display(QWidget):
                 df[col] = df[col].apply(lambda x: x * quantity)
                 df['Volume'] = 1
             df.sort_values(by=['Date'], ascending=True, inplace=True)
-            market_value_history = pd.concat([market_value_history, df]).groupby(['Date']).sum().reset_index()
+            market_value_history = pd.concat(
+                [market_value_history, df]).groupby(
+                ['Date']).sum().reset_index()
         # https: // stackoverflow.com / questions / 63750988 / using - multiprocessing -with-pandas - to - read - modify - and -write - thousands - csv - files
 
         # self.plot_all_returns_history=True
         if self.plot_all_returns_history:
             mask1 = self.overall_holdings["current_holding"] == False
-            mask2 = self.overall_holdings["type"] == "Sell"
-            mask=mask1 & mask2
+            mask2 = self.overall_holdings["type"] == TRADE_TYPE_SELL[0]
+            mask = mask1 & mask2
             sold_holding_data_df = self.overall_holdings.loc[mask].copy()
-            sold_holding_history = self.extract_sold_holdings_history(self.overall_holdings)
+            sold_holding_history = self.extract_sold_holdings_history(
+                self.overall_holdings)
 
             for symbol_date_range, path_to_csv_file in sold_holding_history.items():
-                symbol, buy_date, sale_date = date_symbol_split(symbol_date_range)
-                buy_date=datetime.date.fromisoformat(str(buy_date))
-                sale_date=datetime.date.fromisoformat(str(sale_date))
+                symbol, buy_date, sale_date = date_symbol_split(
+                    symbol_date_range)
+                buy_date = datetime.date.fromisoformat(str(buy_date))
+                sale_date = datetime.date.fromisoformat(str(sale_date))
                 mask1 = sold_holding_data_df['date'] == sale_date
                 mask2 = sold_holding_data_df['equity'] == symbol
-                mask = mask1   & mask2
-                sold_df=sold_holding_data_df[mask]
+                mask = mask1 & mask2
+                sold_df = sold_holding_data_df[mask]
 
                 for idx, row in sold_df.iterrows():
                     quantity = int(row['quantity'])
@@ -377,7 +511,8 @@ class holdings_returns_display(QWidget):
                         df[col] = df[col].apply(lambda x: x * quantity)
                         df['Volume'] = 1
                     df.sort_values(by=['Date'], ascending=True, inplace=True)
-                    market_value_history = pd.concat([market_value_history, df]).groupby(
+                    market_value_history = pd.concat(
+                        [market_value_history, df]).groupby(
                         ['Date']).sum().reset_index()
 
         # print(self.market_value_history.head(10).to_string())
@@ -385,7 +520,6 @@ class holdings_returns_display(QWidget):
         #     # https: // www.analyticsvidhya.com / blog / 2020 / 05 / datetime - variables - python - pandas /
         # # df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
         return market_value_history
-
 
     def widgets(self):
         # holding_df = self.get_all_holdings_details()
@@ -609,7 +743,8 @@ class holdings_returns_display(QWidget):
         # import pandas as pd
         # df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
 
-        self.transactions_detail_df.sort_values(by="Date", ascending=True, inplace=True)
+        self.transactions_detail_df.sort_values(by="Date", ascending=True,
+                                                inplace=True)
 
         fig = make_subplots(rows=2, cols=1,
                             # column_widths=[0.6, 0.4],
@@ -625,12 +760,6 @@ class holdings_returns_display(QWidget):
             t=80  # top margin
         ))
 
-        # add moving averages to df
-        self.market_value_history['MA20'] = self.market_value_history['Close'].rolling(window=20, min_periods=1).mean()
-        self.market_value_history['MA50'] = self.market_value_history['Close'].rolling(window=50, min_periods=1).mean()
-        self.market_value_history['MA100'] = self.market_value_history['Close'].rolling(window=100, min_periods=1).mean()
-        self.market_value_history['MA200'] = self.market_value_history['Close'].rolling(window=200, min_periods=1).mean()
-
         fig.add_trace(go.Candlestick(x=self.market_value_history['Date'],
                                      open=self.market_value_history['Open'],
                                      high=self.market_value_history['High'],
@@ -638,33 +767,44 @@ class holdings_returns_display(QWidget):
                                      close=self.market_value_history['Close'],
                                      name='Unrealised Gain/Loss[Rs]',
                                      showlegend=True))
-        fig.add_trace(go.Scatter(x=self.market_value_history['Date'],
-                                 y=self.market_value_history['MA20'],
-                                 opacity=0.7,
-                                 line=dict(color='black', width=2),
-                                 name='SMA 20'))
-        fig.add_trace(go.Scatter(x=self.market_value_history['Date'],
-                                 y=self.market_value_history['MA50'],
-                                 opacity=0.7,
-                                 line=dict(color='blue', width=2),
-                                 name='SMA 50'))
-        fig.add_trace(go.Scatter(x=self.market_value_history['Date'],
-                                 y=self.market_value_history['MA100'],
-                                 opacity=0.7,
-                                 line=dict(color='green', width=2),
-                                 name='SMA 100'))
-        fig.add_trace(go.Scatter(x=self.market_value_history['Date'],
-                                 y=self.market_value_history['MA200'],
-                                 opacity=0.7,
-                                 line=dict(color='red', width=2),
-                                 name='SMA 200'))
+
+        moving_avg = 'SMA'
+        if moving_avg == 'SMA':
+            sma_dict = {'SMA20': [20, 'black'], 'SMA44': [44, 'coral'],
+                        'SMA50': [50, 'blue'], 'SMA100': [100, 'green'],
+                        'SMA200': [200, 'red']}
+
+            for sma, val in sma_dict.items():
+                self.market_value_history[sma] = self.market_value_history[
+                    'Close'].rolling(window=val[0], min_periods=1).mean()
+                fig.add_trace(go.Scatter(x=self.market_value_history['Date'],
+                                         y=self.market_value_history[sma],
+                                         opacity=0.7,
+                                         line=dict(color=val[1], width=2),
+                                         name=sma))
+        elif moving_avg == 'EMA':
+            ema_dict = {'EMA10': [10, 'black'], 'EMA12': [12, 'coral'],
+                        'EMA21': [21, 'blue'], 'EMA26': [26, 'green'],
+                        'EMA55': [55, 'red'], 'EMA63': [63, 'darkviolet'],
+                        'EMA200': [200, 'olive']}
+            for ema, val in ema_dict.items():
+                self.market_value_history[ema] = self.market_value_history[
+                    'Close'].ewm(span=val[0], adjust=False, ).mean()
+                fig.add_trace(go.Scatter(x=self.market_value_history['Date'],
+                                         y=self.market_value_history[ema],
+                                         opacity=0.7,
+                                         line=dict(color=val[1], width=2),
+                                         name=ema))
 
         fig.add_trace(go.Scatter(x=self.transactions_detail_df['Date'],
-                                 y=self.transactions_detail_df['Cumulative_Amount'],
+                                 y=self.transactions_detail_df[
+                                     'Cumulative_Amount'],
                                  opacity=0.7,
                                  mode='markers+lines',
                                  line=dict(color='red', width=3),
-                                 marker=dict(color='LightSkyBlue', size=1, line=dict(color='blue', width=0.1)),
+                                 marker=dict(color='LightSkyBlue', size=1,
+                                             line=dict(color='blue',
+                                                       width=0.1)),
                                  name='Invesment[Rs]'))
 
         fig.add_trace(go.Scatter(x=self.overall_holdings['date'],
@@ -672,10 +812,13 @@ class holdings_returns_display(QWidget):
                                  opacity=0.7,
                                  mode='markers+lines',
                                  line=dict(color='green', width=3),
-                                 marker=dict(color='LightSkyBlue', size=3, line=dict(color='LightSkyBlue', width=0.2)),
+                                 marker=dict(color='LightSkyBlue', size=3,
+                                             line=dict(color='LightSkyBlue',
+                                                       width=0.2)),
                                  name='Realised Gain/Loss[Rs]'))
 
-        colors = ['green' if row['gain_loss'] >= 0 else 'red' for index, row in self.overall_holdings.iterrows()]
+        colors = ['green' if row['gain_loss'] >= 0 else 'red' for index, row in
+                  self.overall_holdings.iterrows()]
         fig.add_trace(go.Bar(x=self.overall_holdings['date'],
                              y=self.overall_holdings['gain_loss'],
                              marker_color=colors,
@@ -683,35 +826,43 @@ class holdings_returns_display(QWidget):
                              name='Realised Gain/Loss[Rs]',
                              ), row=2, col=1)
 
+        start_date = self.overall_holdings['date'].iloc[0]
+        end_date = datetime.date.today() + datetime.timedelta(30)
         # build complete timeline from start date to end date
-        dt_all = pd.date_range(start=self.market_value_history.index[0], end=self.market_value_history.index[-1])
-        # retrieve the dates that ARE in the original datset
-        dt_obs = [d.strftime("%Y-%m-%d") for d in pd.to_datetime(self.market_value_history.index)]
+        dt_all = pd.date_range(start=self.market_value_history.index[0],
+                               end=self.market_value_history.index[-1])
+        # retrieve the dates that ARE in the original dataset
+        dt_obs = [d.strftime("%Y-%m-%d") for d in
+                  pd.to_datetime(self.market_value_history.index)]
         # print(dt_obs)
         # define dates with missing values
-        dt_breaks = [d for d in dt_all.strftime("%Y-%m-%d").tolist() if not d in dt_obs]
+        dt_breaks = [d for d in dt_all.strftime("%Y-%m-%d").tolist() if
+                     not d in dt_obs]
 
         fig.update_layout(showlegend=True,
                           xaxis_rangeslider_visible=False,
                           xaxis_rangebreaks=[dict(values=dt_breaks)])
 
         # update y-axis label
-        fig.update_yaxes(title_text="Market Value [Rs.]", showgrid=True, row=1, col=1)
+        fig.update_yaxes(title_text="Market Value [Rs.]", showgrid=True, row=1,
+                         col=1)
         fig.update_yaxes(title_text=f"INR[Rs]", showgrid=True, row=2, col=1)
         # fig.update_yaxes(title_text="MACD", showgrid=True, row=3, col=1)
         # fig.update_yaxes(title_text="RSI", row=4, col=1)
 
         # hide dates with no values
         fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
+        fig.update_xaxes(minor_showgrid=True)
         # remove rangeslider
         # fig.update_layout(xaxis_rangeslider_visible=False)
         # # add chart title
-        title_str="Summary of Holdings"
-        data_info="Current Portfolio"
+        title_str = "Summary of Holdings"
+        data_info = "Current Portfolio"
         if self.plot_all_returns_history:
             data_info = "Historic Portfolio"
-        title_str=f"{title_str}({data_info})"
+        title_str = f"{title_str}({data_info})"
         fig.update_layout(title=title_str)
+        fig.update_layout(xaxis=dict(range=[start_date, end_date]))
         # fig.layout.annotations[1].update(y=0.05)
         fig.update_layout(legend=dict(
             orientation="h",
@@ -728,7 +879,8 @@ class holdings_returns_display(QWidget):
         # import pandas as pd
         # df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
 
-        self.transactions_detail_df.sort_values(by="Date", ascending=True, inplace=True)
+        self.transactions_detail_df.sort_values(by="Date", ascending=True,
+                                                inplace=True)
 
         # print(self.transactions_df.to_string())
         invested = {
@@ -845,7 +997,8 @@ class holdings_returns_display(QWidget):
         # path_to_symbol=f"{symbol}.NS"
         cwd = os.getcwd()
         # symbol = f"{symbol}.NS"
-        path_to_csv_file = os.path.join(cwd, 'database', f"{symbol}_history.csv")
+        path_to_csv_file = os.path.join(cwd, 'database',
+                                        f"{symbol}_history.csv")
         if os.path.isfile(path_to_csv_file):
             df = pd.DataFrame(pd.read_csv(path_to_csv_file))
             # df.reset_index(inplace=True)
@@ -999,30 +1152,41 @@ class holdings_returns_display(QWidget):
 
         return Tmodel, Tview
 
-
-
     def calculate_sum(self):
-        credit_card = "{:.{}f}".format(self.df_reception_payin["CreditCard"].sum(), 3)
-        debit_card = "{:.{}f}".format(self.df_reception_payin["DebitCard"].sum(), 3)
+        credit_card = "{:.{}f}".format(
+            self.df_reception_payin["CreditCard"].sum(), 3)
+        debit_card = "{:.{}f}".format(
+            self.df_reception_payin["DebitCard"].sum(), 3)
         cash_payin = "{:.{}f}".format(self.df_reception_payin["Cash"].sum(), 3)
         unpaid = "{:.{}f}".format(self.df_reception_payin["Unpaid"].sum(), 3)
         eft_payin = "{:.{}f}".format(self.df_reception_payin["EFT"].sum(), 3)
-        credit_notes = "{:.{}f}".format(self.df_reception_payin["CreditNote"].sum(), 3)
+        credit_notes = "{:.{}f}".format(
+            self.df_reception_payin["CreditNote"].sum(), 3)
 
-        total_transaction_reciept = float(cash_payin) + float(credit_card) + float(debit_card) + float(
+        total_transaction_reciept = float(cash_payin) + float(
+            credit_card) + float(debit_card) + float(
             eft_payin) + float(credit_notes)
         balance_amount = float(unpaid) - float(total_transaction_reciept)
 
-        self.credit_card_total.setText(format_currency(credit_card, 'INR', locale='en_IN'))
-        self.debit_card_total.setText(format_currency(debit_card, 'INR', locale='en_IN'))
-        self.cash_payin.setText(format_currency(cash_payin, 'INR', locale='en_IN'))
-        self.unpaid_total.setText(format_currency(unpaid, 'INR', locale='en_IN'))
-        self.eft_payin_total.setText(format_currency(eft_payin, 'INR', locale='en_IN'))
-        self.credit_note_total.setText(format_currency(credit_notes, 'INR', locale='en_IN'))
+        self.credit_card_total.setText(
+            format_currency(credit_card, 'INR', locale='en_IN'))
+        self.debit_card_total.setText(
+            format_currency(debit_card, 'INR', locale='en_IN'))
+        self.cash_payin.setText(
+            format_currency(cash_payin, 'INR', locale='en_IN'))
+        self.unpaid_total.setText(
+            format_currency(unpaid, 'INR', locale='en_IN'))
+        self.eft_payin_total.setText(
+            format_currency(eft_payin, 'INR', locale='en_IN'))
+        self.credit_note_total.setText(
+            format_currency(credit_notes, 'INR', locale='en_IN'))
 
-        self.total_unpaid_amount.setText(format_currency(unpaid, 'INR', locale='en_IN'))
-        self.total_cleared_amount.setText(format_currency(total_transaction_reciept, 'INR', locale='en_IN'))
-        self.overall_balance.setText(format_currency(balance_amount, 'INR', locale='en_IN'))
+        self.total_unpaid_amount.setText(
+            format_currency(unpaid, 'INR', locale='en_IN'))
+        self.total_cleared_amount.setText(
+            format_currency(total_transaction_reciept, 'INR', locale='en_IN'))
+        self.overall_balance.setText(
+            format_currency(balance_amount, 'INR', locale='en_IN'))
 
         self.credit_card_total.setStyleSheet('color: blue')
         self.debit_card_total.setStyleSheet('color: blue')
@@ -1047,7 +1211,8 @@ class holdings_returns_display(QWidget):
         elif len(indexes) == 0 and not mdlIdx.isValid():
             # print("new..")
             self.menu_payin = QMenu(self)
-            historyAct = QAction(QIcon(""), "History", self, triggered=self.plot_history)
+            historyAct = QAction(QIcon(""), "History", self,
+                                 triggered=self.plot_history)
             # CloseBalanceAct = QAction(QIcon(""), "Clear Balance and Close a/c", self, triggered=self.clear_and_close)
             # newAct.setShortcut(QKeySequence("Ctrl+N"))
             editStk = self.menu_payin.addAction(historyAct)
@@ -1057,7 +1222,8 @@ class holdings_returns_display(QWidget):
             self.menu_payin = QMenu(self)
             # newAct = QAction(QIcon(""), "New", self, triggered=self.newBill_payin)
             # newAct.setShortcut(QKeySequence("Ctrl+N"))
-            historyAct = QAction(QIcon(""), "History", self, triggered=self.plot_history)
+            historyAct = QAction(QIcon(""), "History", self,
+                                 triggered=self.plot_history)
             # replaceAct = QAction(QIcon(""), "New", self, triggered=self.replaceBill_payin)
             # replaceAct = QAction(QIcon(""), "Edit", self, triggered=self.replaceBill_payin)
             # duelistAct = QAction(QIcon(""), "Register Unpaid", self, triggered=self.move_to_unpaid_payin)
@@ -1077,8 +1243,6 @@ class holdings_returns_display(QWidget):
 
         self.menu_payin.exec_(self.sender().viewport().mapToGlobal(pos))
 
-
-
     # BILL_MODIFY_TYPE = ["Update", "Replace"]
     def plot_history(self):
         # fetch data from mysql
@@ -1092,3 +1256,19 @@ class holdings_returns_display(QWidget):
         # print(row_data)
         self.plot_graphs(price=row_data[2], symbol=row_data[0])
 
+
+if __name__ == '__main__':
+    import sys
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    mysql_data = {'user': 'kiran', 'passwd': 'pass1word', 'port': 3306,
+                  'host': 'localhost', 'db': 'stock_database'}
+    super_trend = holdings_returns_display(False, **mysql_data)
+    # super_trend.show()
+    super_trend.showMaximized()
+    # if gui_switch.exec_() == gui_switch.Accepted:
+    #     plot_all_data = gui_switch.get_inp()
+    #     print("Plot all data ?",plot_all_data)
+
+    sys.exit(app.exec_())

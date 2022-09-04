@@ -9,10 +9,10 @@ from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateTimeEdit
 #     DATE_TIME, DATE_TIME1, \
 #     PAYIN_KEY_PHARMACY, PAYOUT_KEY_PHARMACY, PAYIN_DEPARTMENT_PHARMACY, PAY_TYPE_PHARMACY1, \
 #     PAY_TYPE_PHARMACY2
-
+import pandas as pd
 from utility.utility_functions import make_nested_dict, parse_str
-from utility.libnames import AGENCY_LIST, EXCHANGE_LIST
-from utility.date_time import DATE_TIME1,  DATE_TIME
+from utility.libnames import AGENCY_LIST, EXCHANGE_LIST,TRADE_TYPE_BUY
+from utility.date_time import DATE_TIME1,  DATE_TIME,DATE_FMT_DMY
 from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
 
 
@@ -42,7 +42,7 @@ class add_new_stock(QDialog):
     def widgets(self):
         self.save_db = False
         self.titleText = QLabel("Add New stock")
-        self.agencyEntry = QLineEdit()
+        # self.agencyEntry = QLineEdit()
         self.agencyEntry = QComboBox()
         self.agencyEntry.addItems(AGENCY_LIST)
         # self.agencyEntry.setDisabled(True)
@@ -60,6 +60,9 @@ class add_new_stock(QDialog):
         self.trade_dateEntry = QDateEdit(self)
         self.trade_dateEntry.setDate(QDate.currentDate())
         self.trade_dateEntry.setDisplayFormat(DATE_TIME1)
+
+        self.tradeTypeEntry = QComboBox()
+        self.tradeTypeEntry.addItems(TRADE_TYPE_BUY)
 
         self.trade_priceEntry = QLineEdit()
         self.trade_priceEntry.setPlaceholderText("Enter average price")
@@ -162,9 +165,11 @@ class add_new_stock(QDialog):
         agency = self.agencyEntry.currentText()
         # xchange = self.exchangeEntry.currentText()
         equity = self.equityEntry.text()
+        # self.trade_dateEntry.setDisplayFormat(DATE_TIME)
         tdate = self.trade_dateEntry.text()
         price = self.trade_priceEntry.text()
         quantity = self.quantityEntry.text()
+        tradetype=self.tradeTypeEntry.currentText()
 
         new_stock_addition = make_nested_dict()
         for key in TOTAL_HOLDINGS_DB_HEADER:
@@ -180,7 +185,7 @@ class add_new_stock(QDialog):
             return
 
         if self.chargesEntry.text() == "":
-            chargesEntry = "na"
+            chargesEntry = 0
         else:
             chargesEntry = self.chargesEntry.text()
 
@@ -195,13 +200,15 @@ class add_new_stock(QDialog):
         for key in TOTAL_HOLDINGS_DB_HEADER:
             new_stock_addition[key]=None
 
-        dateNow = str(QDateTime.currentDateTime().toString(DATE_TIME))
+        # dateNow = str(QDateTime.currentDateTime().toString(DATE_TIME))
+
         new_stock_addition['id'] = 0
         new_stock_addition['ref_number'] = self.ref_no
-        new_stock_addition['date'] = dateNow
-        new_stock_addition['type'] = TRADE_TYPE[0]
+        new_stock_addition['date'] = pd.to_datetime(tdate, format=DATE_FMT_DMY)
+        # new_stock_addition['type'] = TRADE_TYPE[0]
+        new_stock_addition['type'] = tradetype
         new_stock_addition['agency'] = agency
-        new_stock_addition['equity'] = equity
+        new_stock_addition['equity'] = equity.upper()
         new_stock_addition['quantity'] = quantity
         new_stock_addition['price'] = float(price)
         new_stock_addition['fees'] = chargesEntry
@@ -242,6 +249,7 @@ class add_new_stock(QDialog):
         self.topLayout.addRow(QLabel("Agency: "), self.agencyEntry)
         # self.topLayout.addRow(QLabel("Exchange: "), self.exchangeEntry)
         self.topLayout.addRow(QLabel("Trade Date: "), self.trade_dateEntry)
+        self.topLayout.addRow(QLabel("Trade Type: "), self.tradeTypeEntry)
         self.topLayout.addRow(QLabel("Equity: "), self.equityEntry)
         self.topLayout.addRow(QLabel("Average Price: "), self.trade_priceEntry)
         self.topLayout.addRow(QLabel("Quantity: "), self.quantityEntry)

@@ -1,10 +1,12 @@
 from PyQt5.QtCore import QDate
-import os
+import os,sys
 import datetime
 import ast
 import random
 import numpy as np
 import pandas as pd
+from pathlib import Path
+from sqlite3_database.sqlite3_crud import sqlite3_crud
 
 from collections import defaultdict
 
@@ -15,7 +17,7 @@ from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME,\
     BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
 
 from utility.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS\
-    ,PATH_TO_DATABASE_SOLD_HOLDINGS
+    ,PATH_TO_DATABASE_SOLD_HOLDINGS,PATH_TO_DATABASE_CURRENT_INDEX
 
 def get_statementNameByDate(name, bill_day=None):
     if bill_day:
@@ -23,6 +25,11 @@ def get_statementNameByDate(name, bill_day=None):
     else:
         now = QDate.currentDate()
         return str(name) + now.toString('dd_MM_yyyy')
+
+
+def quit_now():
+    # logger.info(f"Exiting the program..")
+    sys.exit(0)
 
 
 class make_nested_dict(dict):
@@ -213,6 +220,7 @@ def create_current_holdings_csv_file_names(symbol_df):
         buy_date = row['date']
         symbol_buy_date = symbol_date_string(symbol, buy_date)
         path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol_buy_date}_history.csv")
+        # print(path_to_csv_file)
         symbol_csv_path_list[symbol_buy_date]=path_to_csv_file
     return  symbol_csv_path_list
 
@@ -223,6 +231,22 @@ def create_indices__csv_file_names(indices_df):
     # symbol_buy_date = symbol_date_string(symbol, buy_date)
     path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol}_history.csv")
     symbol_csv_path_list[symbol] = path_to_csv_file
+
+
+def create_current_index_csv_file_names(symbol_df):
+    # mask = df["current_holding"] == True
+    # symbol_df = df[mask]
+    # print(symbol_df.head(3).to_string())
+    # exit()
+    symbol_csv_path_list = make_nested_dict()
+    for index, row in symbol_df.iterrows():
+        symbol = row['indice_name']
+        buy_date = row['from_date']
+        symbol_buy_date = symbol_date_string(symbol, buy_date)
+        path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_INDEX, f"{symbol_buy_date}_history.csv")
+        symbol_csv_path_list[symbol_buy_date] = path_to_csv_file
+    return symbol_csv_path_list
+
 
 
 def create_sold_holdings_csv_file_names(df):
@@ -273,3 +297,24 @@ def create_sold_holdings_csv_file_names(df):
         # if symbol == "ADANIGREEN":
         #     exit()
     return  symbol_csv_path_list
+
+def extablish_db_connection():
+    # logger.info("Connecting to MYSQL server")
+    sqlite_db_path = os.path.join(PDIR,'../sqlite3_database',MYSQL_SQLITE_DB)
+    file_path = Path(sqlite_db_path)
+    try:
+        my_abs_path = file_path.resolve(strict=True)
+    except FileNotFoundError as e:
+        print("Failed to connect to MYSQL server. Exiting...")
+        print(e)
+        quit_now()
+
+    mysql_log_data = sqlite3_crud(filename=f"{my_abs_path}", table=MYSQL_SQLITE_DB_LOGIN)
+    mysql_log = mysql_log_data.retrieve('1')
+    db_cfg = dict(user=mysql_log['mysql_login'],
+                       passwd=mysql_log['mysql_passwd'],
+                       port=mysql_log['mysql_port'],
+                       host=mysql_log['mysql_hostname'],
+                       db=mysql_log['mysql_dbname'])
+
+    return db_cfg

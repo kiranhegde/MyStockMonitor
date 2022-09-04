@@ -12,7 +12,7 @@ import datetime
 #     PAY_TYPE_PHARMACY2
 
 from utility.utility_functions import make_nested_dict, parse_str
-from utility.libnames import AGENCY_LIST, EXCHANGE_LIST
+from utility.libnames import AGENCY_LIST, EXCHANGE_LIST,TRADE_TYPE_SELL
 from utility.date_time import DATE_TIME1,DATE_FMT_DMY
 
 from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
@@ -52,6 +52,7 @@ class sell_selected_stock(QDialog):
         self.agency = self.stock_data['agency']
         self.equity = self.stock_data['equity']
         self.buy_date = self.stock_data['date']
+        self.trade_type = self.stock_data['type']
         self.buy_price = str(self.stock_data['price'])
         self.buy_quantity = str(self.stock_data['quantity'])
         self.buy_charges = str(self.stock_data['fees'])
@@ -85,6 +86,11 @@ class sell_selected_stock(QDialog):
         self.buy_dateEntry.setDate(self.buy_date)
         self.buy_dateEntry.setDisplayFormat(DATE_TIME1)
         self.buy_dateEntry.setEnabled(False)
+
+        self.tradeTypeEntry = QComboBox()
+        self.tradeTypeEntry.addItems(TRADE_TYPE_SELL)
+        self.tradeTypeEntry.setCurrentIndex(0)
+
 
         self.buy_priceEntry = QLineEdit()
         self.buy_priceEntry.setText(self.buy_price)
@@ -175,6 +181,7 @@ class sell_selected_stock(QDialog):
         self.topLayout.addRow(QLabel("Buy Charges: "), self.buy_chargesEntry)
         self.topLayout.addRow(QLabel("Buy Quantity: "), self.buy_quantityEntry)
         self.topLayout.addRow(QLabel("Sale Date: "), self.sell_dateEntry)
+        self.topLayout.addRow(QLabel("Trade Type: "), self.tradeTypeEntry)
         self.topLayout.addRow(QLabel("Sale Price: "), self.sell_priceEntry)
         self.topLayout.addRow(QLabel("Sale Quantity: "), self.sell_quantityEntry)
         self.topLayout.addRow(QLabel("Charges (if any): "), self.chargesEntry)
@@ -252,6 +259,7 @@ class sell_selected_stock(QDialog):
         sale_price = self.sell_priceEntry.text()
         sale_quantity = self.sell_quantityEntry.text()
         chargesEntry = self.chargesEntry.text()
+        tradetype = self.tradeTypeEntry.currentText()
 
         if sale_price == "":
             QMessageBox.critical(self, " Stock sale price missing !!!",
@@ -278,7 +286,8 @@ class sell_selected_stock(QDialog):
         sell_stock_details['ref_number'] = self.ref_number
         date_time = datetime.datetime.strptime(sale_date, DATE_FMT_DMY)
         sell_stock_details['date'] = date_time.date()
-        sell_stock_details['type'] = TRADE_TYPE[1]
+        # sell_stock_details['type'] = TRADE_TYPE[1]
+        sell_stock_details['type'] = tradetype
         sell_stock_details['agency'] = agency
         sell_stock_details['equity'] = equity
         sell_stock_details['quantity'] = sale_quantity

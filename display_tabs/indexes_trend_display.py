@@ -16,10 +16,12 @@ import yfinance as yf
 
 from mysql_tools.mysql_crud import mysql_table_crud
 from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME
-from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS
+from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS,PATH_TO_DATABASE_CURRENT_INDEX
 from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
     CURRENT_HOLDING_DB_TO_DISPLAY, CURRENT_HOLDINGS_HEADER_DROP_LIST, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST, \
-    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, TRADE_TYPE, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB
+    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, TRADE_TYPE, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB,\
+    INDEX_DB_TABLE_NAME,INDEXES_DB_HEADER,INDEX_NAME_DICT,INDEX_HEADER_DISPLAY_LIST,INDEX_LIST_DISPLAY
+
 
 from gui_widgets.gui_widgets_for_adding_new_stock import add_new_stock as new_stock
 from gui_widgets.gui_widgets_for_editing_selected_stock import edit_selected_stock
@@ -34,7 +36,8 @@ from utility.utility_functions import gen_id, make_nested_dict, parse_str, weigh
 from os.path import expanduser
 from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
 from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id, \
-    symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split
+    symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split,\
+    create_current_index_csv_file_names
 
 from display_tabs.utility_display_tab import get_current_holdings_history, get_current_holdings_history_mp
 
@@ -50,7 +53,7 @@ usr_path = expanduser("~")
 DEFAULT_PATH = f"{usr_path}/Desktop/"
 
 
-class stock_super_trend_display(QWidget):
+class indexes_display(QWidget):
     def __init__(self, **mysql_data):
         super().__init__()
         # self.setWindowTitle("Balance test")
@@ -60,51 +63,158 @@ class stock_super_trend_display(QWidget):
     def UI(self):
         self.connect_to_tables()
 
-        self.current_holding_data_df = self.get_current_holdings_details()
-        # print(self.current_holding_data_df.head(10).to_string())
+        # new_stock_addition={}
+        # ref_no = gen_id(**self.db_cfg)
+        # new_stock_addition['id'] = 0
+        # new_stock_addition['ref_number'] = ref_no
+        # tdate="01-01-2015"
+        # new_stock_addition['from_date'] = pd.to_datetime(tdate, format=DATE_FMT_DMY)
+        # # new_stock_addition['type'] = TRADE_TYPE[0]
         #
-        self.current_holding_history = self.extract_current_holdings_history()
-        # print(self.current_holding_history.keys())
+        # new_stock_addition['indice_name'] = "INDIAVIX"
+        # new_stock_addition['remarks'] = "INDIAVIX"
+        # listt = list(new_stock_addition.values())
+        # vals_tuple = [tuple(listt)]
+        # messge = self.total_index_details.insert_row_by_column_values(row_val=vals_tuple)
+        # print(messge)
         # exit()
 
+        # "NIFTYPHARMA": "^CNXPHARMA",
+        # "NIFTYMETAL": "^CNXMETAL",
+        # "NIFTYFMCG": "^CNXFMCG",
+        # "NIFTYENERGY": "^CNXENERGY",
+        # "NIFTYAUTO": "^CNXAUTO",
+        # "NIFTYFMCG": "^CNXFMCG"
+        symbol_df = self.get_indexes_details()
+        # self.index_trend_data_df = self.get_indexes_details()
+        # print(INDEX_LIST_DISPLAY)
+        self.index_trend_data_df = symbol_df.loc[:, INDEX_LIST_DISPLAY]
+
+        # print(self.index_trend_data_df.to_string())
+        file_names=self.create_index_filename(self.index_trend_data_df)
+        # print(file_names)
+
+        # self.current_index_history = self.extract_current_holdings_history()
+        self.current_index_history = self.extract_current_index_history(file_names)
+        # print(self.current_index_history.keys())
+
+        # exit()
         self.widgets()
         self.layouts()
 
     def widgets(self):
         self.data_plot_browser = QtWebEngineWidgets.QWebEngineView(self)
-        self.current_holding_data_df.columns = CURRENT_HOLDINGS_HEADER_DISPLAY_LIST
-        self.holdingModel, self.holdingTable = self.tableViewDataModel(self.current_holding_data_df)
+        self.index_trend_data_df.columns = INDEX_HEADER_DISPLAY_LIST
+        self.holdingModel, self.holdingTable = self.tableViewDataModel(self.index_trend_data_df)
         self.holdingModel.sort(1, Qt.DescendingOrder)
         self.holdingTable.installEventFilter(self)
         self.holdingTable.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.holdingTable.setColumnHidden(0, True)
         self.holdingTable.customContextMenuRequested.connect(self.rightClickMenuPayIn)
 
     def connect_to_tables(self):
-        self.total_holdings_details = mysql_table_crud(db_table=TOTAL_HOLDINGS_DB_TABLE_NAME,
-                                                       db_header=TOTAL_HOLDINGS_DB_HEADER,
-                                                       **self.db_cfg)
+        self.total_index_details = mysql_table_crud(db_table=INDEX_DB_TABLE_NAME,
+                                                    db_header=INDEXES_DB_HEADER,
+                                                    **self.db_cfg)
 
-    def get_current_holdings_details(self):
+    def get_indexes_details(self):
         data = make_nested_dict()
-        for col in TOTAL_HOLDINGS_DB_HEADER:
+        for col in INDEXES_DB_HEADER:
             data[col] = None
-        data = self.total_holdings_details.read_row_by_column_values()
+        data = self.total_index_details.read_row_by_column_values()
         df = pd.DataFrame(data)
-        mask = df["current_holding"] == True
-        symbol_df = df.loc[mask].copy()
+        # mask = df["current_holding"] == True
+        # symbol_df = df.loc[mask].copy()
 
         # required_columns=['ref_number','equity', 'date', 'avg_price', 'quantity']
         # ['Reference', 'Equity', 'Buy Date', 'Avg. Price', 'Quantity']
         # CURRENT_HOLDING_LIST_DISPLAY
-        symbol_df = symbol_df.loc[:, CURRENT_HOLDING_LIST_DISPLAY]
+        # symbol_df = symbol_df.loc[:, CURRENT_HOLDING_LIST_DISPLAY]
         # symbol_df.columns = CURRENT_HOLDINGS_HEADER_DISPLAY_LIST
 
-        return symbol_df
+        return df
 
-    def extract_current_holdings_history(self):
+    # def create_current_index_csv_file_names(self,symbol_df):
+    #     # mask = df["current_holding"] == True
+    #     # symbol_df = df[mask]
+    #     # print(symbol_df.head(3).to_string())
+    #     # exit()
+    #     symbol_csv_path_list = make_nested_dict()
+    #     for index, row in symbol_df.iterrows():
+    #         symbol = row['indice_name']
+    #         buy_date = row['from_date']
+    #         symbol_buy_date = symbol_date_string(symbol, buy_date)
+    #         path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_INDEX, f"{symbol_buy_date}_history.csv")
+    #         symbol_csv_path_list[symbol_buy_date] = path_to_csv_file
+    #     return symbol_csv_path_list
+
+    def create_index_filename(self,index_trend_data_df):
         # return get_current_holdings_history(self.current_holding_data_df)
-        current_holdings_csv_file_names = create_current_holdings_csv_file_names(self.current_holding_data_df)
-        return get_current_holdings_history_mp(current_holdings_csv_file_names)
+        current_holdings_csv_file_names = create_current_index_csv_file_names(index_trend_data_df)
+        return current_holdings_csv_file_names
+        # return get_current_holdings_history_mp(current_holdings_csv_file_names)
+
+    def extract_current_index_history(self,holdings_csv_file_names):
+        # https://stackoverflow.com/questions/62130801/parallel-processing-in-python-to-fill-a-dictionary-with-the-value-as-a-dictionar
+        # from multiprocessing import Process, Manager
+        current_holding_history = make_nested_dict()
+
+        # current_holdings_csv_file_names = create_current_holdings_csv_file_names(current_holding_data_df)
+
+        def csv_file_read(filename):
+            f = pd.read_csv(filename)
+            return f
+
+        def download_and_read_csv(symbol, filename):
+            # data = yf.download(symbol_ns, threads=True)
+            # print(symbol)
+            # print(filename)
+            data = yf.download(symbol,threads=True)
+            data.to_csv(filename)
+            f = csv_file_read(filename)
+            return f
+
+        def compile_stock_data(result):
+            df = pd.DataFrame(result)
+            mask = df['Date'] > str(deltatime)
+            for i in ['Open', 'Close', 'High', 'Low', 'Adj Close', 'Volume']:
+                df[i] = df[i].astype('float64')
+            df = df.loc[mask].copy()
+            current_holding_history[symbol_buy_date] = reduce_mem_usage(df)
+
+        # pool = Pool(processes=6)
+        jobs = []
+        deltatime = datetime.date.today() - datetime.timedelta(5 * 365)
+        for symbol_buy_date, path_to_csv_file in holdings_csv_file_names.items():
+
+            if os.path.isfile(path_to_csv_file):
+                csv_data = csv_file_read(path_to_csv_file)
+                compile_stock_data(csv_data)
+                # process=multiprocessing.Process(target=compile_stock_data,args=(csv_data))
+                # jobs.append(process)
+                # pool.apply_async(csv_file_read, args=(path_to_csv_file,), callback=compile_stock_data)
+            else:
+                print(path_to_csv_file, 'path missing')
+                symbol, buy_date = symbol_date_split(symbol_buy_date)
+                symbol_ns = f"{INDEX_NAME_DICT[symbol]}"
+                csv_data = download_and_read_csv(symbol_ns, path_to_csv_file)
+                compile_stock_data(csv_data)
+                # process = multiprocessing.Process(target=compile_stock_data, args=(csv_data))
+                # jobs.append(process)
+
+                # pool.apply_async(download_and_read_csv, args=(symbol_ns,path_to_csv_file,), callback=compile_stock_data)
+
+        # # Start the processes (i.e. calculate the random number lists)
+        # for j in jobs:
+        #     j.start()
+        #
+        # # Ensure all of the processes have finished
+        # for j in jobs:
+        #     j.join()
+
+        # pool.close()
+        # pool.join()
+        return current_holding_history
 
     def layouts(self):
         self.mainLayout = QHBoxLayout()
@@ -115,7 +225,7 @@ class stock_super_trend_display(QWidget):
 
         self.leftLayout = QVBoxLayout()
         self.rightLayout = QVBoxLayout()
-        self.leftTopGroupBox = QGroupBox("Current Holdings")
+        self.leftTopGroupBox = QGroupBox("Index Names")
         self.rightTopGroupBox = QGroupBox("Script Information")
 
         # self.rightBottomWidget = QWidget()
@@ -127,8 +237,9 @@ class stock_super_trend_display(QWidget):
             val = self.holdingTable.model().index(0, col).data()
             row_data.append(val)
 
+        # print(row_data)
         # self.plot_graphs()
-        self.plot_graphs(price=row_data[3], buy_date=row_data[2], symbol=row_data[1])
+        self.plot_graphs(buy_date=row_data[0], symbol=row_data[1])
         self.rightLayout.addWidget(self.data_plot_browser)
 
         fnt_GBox = QFont()
@@ -150,15 +261,16 @@ class stock_super_trend_display(QWidget):
 
         self.horizontalSplitter.addWidget(self.leftVsplitter)
         self.horizontalSplitter.addWidget(self.rightVsplitter)
-        self.horizontalSplitter.setStretchFactor(0, 12)
-        self.horizontalSplitter.setStretchFactor(1, 88)
+        self.horizontalSplitter.setStretchFactor(0, 5)
+        self.horizontalSplitter.setStretchFactor(1, 95)
         self.horizontalSplitter.setContentsMargins(0, 0, 0, 0)
         self.horizontalSplitter.handle(0)
 
         self.mainLayout.addWidget(self.horizontalSplitter)
         self.setLayout(self.mainLayout)
 
-    def plot_graphs(self, price=100, buy_date=datetime.date.today(), symbol="DMART"):
+    # def plot_graphs(self, price=100, buy_date=datetime.date.today(), symbol="DMART"):
+    def plot_graphs(self, buy_date=datetime.date.today(), symbol="NIFTY50"):
         # https: // stackoverflow.com / questions / 47797383 / plotly - legend - next - to - each - subplot - python
         # buy_date = pd.to_datetime(buy_date).date()
         # print(type(buy_date),buy_date)
@@ -167,7 +279,7 @@ class stock_super_trend_display(QWidget):
         # buy_date = datetime.datetime.strptime(buy_date, DATE_FMT_YMD)
         symbol_buy_date = symbol_date_string(symbol, buy_date)
         # print(symbol_buy_date)
-        df = self.current_holding_history[symbol_buy_date]
+        df = self.current_index_history[symbol_buy_date]
         # exit()
 
         # print(symbol)
@@ -181,10 +293,10 @@ class stock_super_trend_display(QWidget):
             return
 
         # exit()
-        if symbol_buy_date in self.current_holding_history.keys() and not self.current_holding_history[
+        if symbol_buy_date in self.current_index_history.keys() and not self.current_index_history[
             symbol_buy_date].empty:
             # if symbol in self.holding_history.keys() and len(df) != 0 and :
-            df = self.current_holding_history[symbol_buy_date]
+            df = self.current_index_history[symbol_buy_date]
             fig = make_subplots(rows=4, cols=1,
                                 # column_widths=[0.6, 0.4],
                                 row_heights=[0.7, 0.1, 0.1, 0.1],
@@ -234,34 +346,41 @@ class stock_super_trend_display(QWidget):
             # fig.show()
 
             # add moving averages to df
-            df['MA20'] = df['Close'].rolling(window=20, min_periods=1).mean()
-            df['MA50'] = df['Close'].rolling(window=50, min_periods=1).mean()
-            df['MA100'] = df['Close'].rolling(window=100, min_periods=1).mean()
-            df['MA200'] = df['Close'].rolling(window=200, min_periods=1).mean()
-            # df['MA5'] = df['Close'].rolling(window=5).mean()
-            # avg_20 = df.Close.rolling(window=20, min_periods=1).mean()
+            moving_avg = 'SMA'
+            if moving_avg == 'SMA':
+                sma_dict={'SMA20':[20,'black'],'SMA44':[44,'coral'],
+                          'SMA50':[50,'blue'],'SMA100':[100,'green'],
+                          'SMA200':[200,'red']}
 
-            fig.add_trace(go.Scatter(x=df['Date'],
-                                     y=df['MA20'],
-                                     opacity=0.7,
-                                     line=dict(color='black', width=2),
-                                     name='SMA 20'))
-            fig.add_trace(go.Scatter(x=df['Date'],
-                                     y=df['MA50'],
-                                     opacity=0.7,
-                                     line=dict(color='blue', width=2),
-                                     name='SMA 50'))
-            fig.add_trace(go.Scatter(x=df['Date'],
-                                     y=df['MA100'],
-                                     opacity=0.7,
-                                     line=dict(color='green', width=2),
-                                     name='SMA 100'))
-            fig.add_trace(go.Scatter(x=df['Date'],
-                                     y=df['MA200'],
-                                     opacity=0.7,
-                                     line=dict(color='red', width=2),
-                                     name='SMA 200'))
-            fig.add_hline(y=price, line_width=2, line_color="red", opacity=0.7, name='Buy Avg.')
+                for sma,val in sma_dict.items():
+                    df[sma] = df['Close'].rolling(window=val[0],
+                                                     min_periods=1).mean()
+                    fig.add_trace(go.Scatter(x=df['Date'],
+                                             y=df[sma],
+                                             opacity=0.7,
+                                             line=dict(color=val[1], width=2),
+                                             name=sma))
+            elif moving_avg == 'EMA':
+                # 10 -short term (traders)
+                # 21 -short term(traders)
+                # 63 -medium term(investors,marathon trades)
+                # 200 -long term(pure long term)
+                # https://towardsdatascience.com/making-a-trade-call-using-simple-moving-average-sma-crossover-strategy-python-implementation-29963326da7a
+                ema_dict = {'EMA10': [10, 'black'], 'EMA12': [12, 'coral'],
+                            'EMA21': [21, 'blue'], 'EMA26': [26, 'green'],
+                            'EMA55': [55, 'red'], 'EMA63': [63, 'darkviolet'],
+                            'EMA200': [200, 'olive']}
+                for ema, val in ema_dict.items():
+                    df[ema] = df['Close'].ewm(span=val[0],
+                                              adjust=False, ).mean()
+                    fig.add_trace(go.Scatter(x=df['Date'],
+                                             y=df[ema],
+                                             opacity=0.7,
+                                             line=dict(color=val[1], width=2),
+                                             name=ema))
+
+
+            # fig.add_hline(y=price, line_width=2, line_color="red", opacity=0.7, name='Buy Avg.')
 
             # Plot volume trace on 2nd row
             colors = ['green' if row['Open'] - row['Close'] >= 0
@@ -303,6 +422,8 @@ class stock_super_trend_display(QWidget):
                                      line=dict(color='blue', width=1)
                                      ), row=4, col=1)
 
+            start_date = df['Date'].iloc[0]
+            end_date = datetime.date.today() + datetime.timedelta(30)
             # update layout by changing the plot size, hiding legends & rangeslider, and removing gaps between dates
             # fig.update_layout(height=900, width=1200,
             fig.update_layout(showlegend=True,
@@ -317,6 +438,8 @@ class stock_super_trend_display(QWidget):
 
             # hide dates with no values
             fig.update_xaxes(rangebreaks=[dict(values=dt_breaks)])
+            fig.update_xaxes(minor_showgrid=True)
+            fig.update_layout(xaxis=dict(range=[start_date, end_date]))
             # remove rangeslider
             # fig.update_layout(xaxis_rangeslider_visible=False)
             # # add chart title
@@ -625,8 +748,8 @@ class stock_super_trend_display(QWidget):
             self.holdingModel.layoutChanged.emit()
             self.holdingTable.clearSelection()
             pname_mobile = f" patient_name = '{pnameNew}',mobile_no = '{mobile_number}'"
-            messge = self.total_holdings_details.update_rows_by_column_values(set_argument=pname_mobile,
-                                                                              criteria=pname_mobile_old)
+            messge = self.total_index_details.update_rows_by_column_values(set_argument=pname_mobile,
+                                                                           criteria=pname_mobile_old)
             if item is not None:
                 if mobile_number is not None and pnameNew is not None:
                     id = f"{pnameNew}_{mobile_number}"
@@ -650,7 +773,7 @@ class stock_super_trend_display(QWidget):
         mobileNo = item_name.split('_')[1]
         pname_mobile = f"patient_name = '{pname}'  and  mobile_no = '{mobileNo}'"
         # row_data_db = self.payin_table.read_row_by_column_values(criteria=pname_mobile)[0]
-        data = self.total_holdings_details.read_row_by_column_values(criteria=pname_mobile)
+        data = self.total_index_details.read_row_by_column_values(criteria=pname_mobile)
         df = pd.DataFrame(data)
         credit_card = "{:.{}f}".format(df["pay_credit_card"].sum(), 3)
         debit_card = "{:.{}f}".format(df["pay_debit_card"].sum(), 3)
@@ -697,8 +820,8 @@ class stock_super_trend_display(QWidget):
                     item = self.Holding_List.item(indx)
                     self.Holding_List.setCurrentItem(item)
 
-                messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_unpaid,
-                                                                                  criteria=pname_mobile)
+                messge = self.total_index_details.update_rows_by_column_values(set_argument=set_unpaid,
+                                                                               criteria=pname_mobile)
                 # print(messge)
                 QMessageBox.information(self, 'Cleared !!',
                                         f'Selected  transaction of {item_name} has been cleared')
@@ -778,12 +901,12 @@ class stock_super_trend_display(QWidget):
             # remAct.setStatusTip('Delete stock from database')
             # showAct = QAction(QIcon(""), 'Show', self, triggered=self.showBill)
             histStk = self.menu_current_portfolio.addAction(historyAct)
-            addAct = self.menu_current_portfolio.addAction(newAct)
-            editStk = self.menu_current_portfolio.addAction(editeAct)
-            delStk = self.menu_current_portfolio.addAction(deleteAct)
-            avgStk = self.menu_current_portfolio.addAction(avgAct)
-            self.menu_current_portfolio.addSeparator()
-            soldStk = self.menu_current_portfolio.addAction(soldAct)
+            # addAct = self.menu_current_portfolio.addAction(newAct)
+            # editStk = self.menu_current_portfolio.addAction(editeAct)
+            # delStk = self.menu_current_portfolio.addAction(deleteAct)
+            # avgStk = self.menu_current_portfolio.addAction(avgAct)
+            # self.menu_current_portfolio.addSeparator()
+            # soldStk = self.menu_current_portfolio.addAction(soldAct)
 
         self.menu_current_portfolio.exec_(self.sender().viewport().mapToGlobal(pos))
 
@@ -797,7 +920,8 @@ class stock_super_trend_display(QWidget):
             row_data.append(val)
 
         # print(row_data)
-        self.plot_graphs(price=row_data[3], buy_date=row_data[2], symbol=row_data[1])
+        # self.plot_graphs(price=row_data[3], buy_date=row_data[2], symbol=row_data[1])
+        self.plot_graphs(buy_date=row_data[0], symbol=row_data[1])
 
         # item_name = item.text()
 
@@ -828,13 +952,13 @@ class stock_super_trend_display(QWidget):
             df_row = df_row.loc[:, CURRENT_HOLDINGS_HEADER_DB]
             df_row.columns = CURRENT_HOLDINGS_HEADER_DISPLAY_LIST
 
-            self.current_holding_data_df = pd.concat([df_row, self.current_holding_data_df]).reset_index(drop=True)
-            self.holdingModel.update(self.current_holding_data_df, key="New")
+            self.index_trend_data_df = pd.concat([df_row, self.index_trend_data_df]).reset_index(drop=True)
+            self.holdingModel.update(self.index_trend_data_df, key="New")
             self.holdingModel.layoutChanged.emit()
             self.holdingTable.clearSelection()
 
             if save_db:
-                messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
+                messge = self.total_index_details.insert_row_by_column_values(row_val=vals_tuple)
 
             # self.calculate_sum()
 
@@ -857,7 +981,7 @@ class stock_super_trend_display(QWidget):
         for key in TOTAL_HOLDINGS_DB_HEADER:
             edit_stock[key] = None
         search_item = f"ref_number = {row_data[0]}"
-        row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
+        row_data_db = self.total_index_details.read_row_by_column_values(criteria=search_item)[0]
 
         # print(row_data)
         # print(row_data_db)
@@ -870,13 +994,13 @@ class stock_super_trend_display(QWidget):
                 # https: // stackoverflow.com / questions / 21608228 / conditional - replace - pandas
                 # https: // stackoverflow.com / questions / 36909977 / update - row - values - where - certain - condition - is -met - in -pandas / 36910033
 
-                mask1 = self.current_holding_data_df["Reference"] == row_data_db['ref_number']
+                mask1 = self.index_trend_data_df["Reference"] == row_data_db['ref_number']
                 for k, v in edit_stock_details.items():
                     key = CURRENT_HOLDING_DB_TO_DISPLAY[k]
-                    if key in self.current_holding_data_df.columns.values.tolist() and key != 'Reference':
-                        self.current_holding_data_df.loc[mask1, key] = edit_stock_details[k]
+                    if key in self.index_trend_data_df.columns.values.tolist() and key != 'Reference':
+                        self.index_trend_data_df.loc[mask1, key] = edit_stock_details[k]
 
-                self.holdingModel.update(self.current_holding_data_df, key="New")
+                self.holdingModel.update(self.index_trend_data_df, key="New")
                 self.holdingModel.layoutChanged.emit()
                 self.holdingTable.clearSelection()
 
@@ -886,8 +1010,8 @@ class stock_super_trend_display(QWidget):
                         if k != 'id':
                             set_list = f"{set_list},{k}='{v}'"
                     set_list = set_list[1:]
-                    messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
-                                                                                      criteria=f"ref_number='{row_data_db['ref_number']}'")
+                    messge = self.total_index_details.update_rows_by_column_values(set_argument=set_list,
+                                                                                   criteria=f"ref_number='{row_data_db['ref_number']}'")
                     # print(set_list)
                     # print(messge)
 
@@ -907,7 +1031,7 @@ class stock_super_trend_display(QWidget):
 
         if row_data[0] != '':
             search_item = f"ref_number = {row_data[0]}"
-            row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
+            row_data_db = self.total_index_details.read_row_by_column_values(criteria=search_item)[0]
             ref_number = row_data_db['ref_number']
             equity = row_data_db['equity']
             msgBox = QMessageBox()
@@ -925,11 +1049,11 @@ class stock_super_trend_display(QWidget):
             msgBox.exec_()
 
             if msgBox.clickedButton() == buttonY:
-                message = self.total_holdings_details.delete_row_by_column_values(criteria=search_item)
-                mask1 = self.current_holding_data_df["Reference"] == int(row_data[0])
-                index = self.current_holding_data_df[mask1].index
-                self.current_holding_data_df.drop(index, axis=0, inplace=True)
-                self.holdingModel.update(self.current_holding_data_df, key="Delete")
+                message = self.total_index_details.delete_row_by_column_values(criteria=search_item)
+                mask1 = self.index_trend_data_df["Reference"] == int(row_data[0])
+                index = self.index_trend_data_df[mask1].index
+                self.index_trend_data_df.drop(index, axis=0, inplace=True)
+                self.holdingModel.update(self.index_trend_data_df, key="Delete")
                 self.holdingModel.layoutChanged.emit()
                 self.holdingTable.clearSelection()
                 QMessageBox.information(self, 'Deleted !!',
@@ -954,7 +1078,7 @@ class stock_super_trend_display(QWidget):
             row_data.append(val)
 
         search_item = f"ref_number = {row_data[0]}"
-        row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
+        row_data_db = self.total_index_details.read_row_by_column_values(criteria=search_item)[0]
 
         # print(row_data)
         # print(row_data_db)
@@ -969,42 +1093,42 @@ class stock_super_trend_display(QWidget):
                 if balance_quantity > 0:
                     # updating latest changes to gui table
                     row_data_db['quantity'] = balance_quantity
-                    mask1 = self.current_holding_data_df["Reference"] == row_data_db['ref_number']
+                    mask1 = self.index_trend_data_df["Reference"] == row_data_db['ref_number']
                     for k, v in row_data_db.items():
                         key = CURRENT_HOLDING_DB_TO_DISPLAY[k]
-                        if key in self.current_holding_data_df.columns.values.tolist() and key != 'Reference':
-                            self.current_holding_data_df.loc[mask1, key] = row_data_db[k]
+                        if key in self.index_trend_data_df.columns.values.tolist() and key != 'Reference':
+                            self.index_trend_data_df.loc[mask1, key] = row_data_db[k]
 
-                    self.holdingModel.update(self.current_holding_data_df, key="New")
+                    self.holdingModel.update(self.index_trend_data_df, key="New")
                     self.holdingModel.layoutChanged.emit()
                     self.holdingTable.clearSelection()
 
                     # updating latest changes to database
                     if save_db:
                         set_list = f"quantity = '{balance_quantity}'"
-                        messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
-                                                                                          criteria=f"ref_number='{row_data_db['ref_number']}'")
+                        messge = self.total_index_details.update_rows_by_column_values(set_argument=set_list,
+                                                                                       criteria=f"ref_number='{row_data_db['ref_number']}'")
                     # adding sold quantities to database
                     if save_db:
                         sell_stock_details['ref_number'] = gen_id(**self.db_cfg)
                         listt = list(sell_stock_details.values())
                         vals_tuple = [tuple(listt)]
-                        messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
+                        messge = self.total_index_details.insert_row_by_column_values(row_val=vals_tuple)
                         print(messge)
                 elif balance_quantity == 0:
                     if save_db:
                         set_list = f"current_holding = '{0}'"
-                        messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
-                                                                                          criteria=f"ref_number='{row_data_db['ref_number']}'")
+                        messge = self.total_index_details.update_rows_by_column_values(set_argument=set_list,
+                                                                                       criteria=f"ref_number='{row_data_db['ref_number']}'")
                         sell_stock_details['ref_number'] = gen_id(**self.db_cfg)
                         listt = list(sell_stock_details.values())
                         vals_tuple = [tuple(listt)]
-                        messge = self.total_holdings_details.insert_row_by_column_values(row_val=vals_tuple)
+                        messge = self.total_index_details.insert_row_by_column_values(row_val=vals_tuple)
                         # print(messge)
-                        mask1 = self.current_holding_data_df["Reference"] == int(row_data[0])
-                        index = self.current_holding_data_df[mask1].index
-                        self.current_holding_data_df.drop(index, axis=0, inplace=True)
-                        self.holdingModel.update(self.current_holding_data_df, key="Delete")
+                        mask1 = self.index_trend_data_df["Reference"] == int(row_data[0])
+                        index = self.index_trend_data_df[mask1].index
+                        self.index_trend_data_df.drop(index, axis=0, inplace=True)
+                        self.holdingModel.update(self.index_trend_data_df, key="Delete")
                         self.holdingModel.layoutChanged.emit()
                         self.holdingTable.clearSelection()
                 else:
@@ -1024,122 +1148,12 @@ class stock_super_trend_display(QWidget):
         for key in TOTAL_HOLDINGS_DB_HEADER:
             edit_stock[key] = None
         search_item = f"ref_number = {row_data[0]}"
-        row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=search_item)[0]
+        row_data_db = self.total_index_details.read_row_by_column_values(criteria=search_item)[0]
         print(row_data_db)
 
         if row_data[0] != "":
             showInfo = average_stocks(row_data_db)
             showInfo.exec_()
-
-    def clear_and_close(self):
-        # print('clear and close')
-        # item = self.List_of_casesheet.currentItem()
-        row = self.Holding_List.currentRow()
-        item = self.Holding_List.item(row)
-        item_name = item.text()
-
-        if item_name == "Others":
-            QMessageBox.information(self, 'Clear Failed !!',
-                                    f"'{item_name}' cannot be cleared !")
-            return
-
-        pname = item_name.split('_')[0]
-        mobileNo = item_name.split('_')[1]
-        pname_mobile = f"patient_name = '{pname}'  and  mobile_no = '{mobileNo}'"
-        # row_data_db = self.payin_table.read_row_by_column_values(criteria=pname_mobile)[0]
-        data = self.total_holdings_details.read_row_by_column_values(criteria=pname_mobile)
-        df = pd.DataFrame(data)
-        credit_card = "{:.{}f}".format(df["pay_credit_card"].sum(), 3)
-        debit_card = "{:.{}f}".format(df["pay_debit_card"].sum(), 3)
-        cash_payin = "{:.{}f}".format(df["pay_cash"].sum(), 3)
-        unpaid = "{:.{}f}".format(df["pay_unpaid"].sum(), 3)
-        eft_payin = "{:.{}f}".format(df["pay_eft"].sum(), 3)
-        credit_notes = "{:.{}f}".format(df["credit_note"].sum(), 3)
-
-        total_transaction_reciept = float(cash_payin) + float(credit_card) + float(debit_card) + float(
-            eft_payin) + float(credit_notes)
-        balance_amount = float(unpaid) - float(total_transaction_reciept)
-        # print(df.to_string())
-        # print(balance_amount)
-        if balance_amount > 0.0:
-            self.modify_stock_details(BILL_MODIFY_TYPE[3], balance_amount=balance_amount)
-        else:
-            QMessageBox.information(self, 'Zero Balance !!',
-                                    f'Account of {item_name} has due amount : Rs. {balance_amount}')
-
-    def move_to_unpaid_payin(self):
-        # print("Moving to unpaid list")
-        # fetch data from mysql
-        index = self.holdingTable.currentIndex().row()
-        ncol = self.holdingModel.columnCount()
-        row_data = []
-        for col in range(ncol):
-            val = self.holdingTable.model().index(index, col).data()
-            row_data.append(val)
-
-        if row_data[1] != '' and row_data[3] != '':
-            date_time = datetime.strptime(row_data[1], DATE_FMT_DMY)
-            date_time = datetime.strftime(date_time, DATE_FMT_YMD)
-            date_time_bill_no = f"date_time = '{date_time}'  and  bill_no = '{row_data[0]}'"
-            row_data_db = self.total_holdings_details.read_row_by_column_values(criteria=date_time_bill_no)[0]
-            check_id = f"{row_data_db['patient_name']}_{row_data_db['mobile_no']}"
-            items0 = [self.Holding_List.item(x).text() for x in range(self.Holding_List.count())]
-
-            if row_data_db['pay_unpaid'] == 0:
-                QMessageBox.information(self, 'Incorrect !!',
-                                        f'There is no unpaid amount in selected  transaction/bill..')
-            elif check_id in items0:
-                QMessageBox.information(self, 'Already Registered !!',
-                                        f'Selected transaction is already registered')
-            else:
-                # process data
-                # row_data_db = row_data_db[0]
-                id = row_data_db['id']
-                billNo = row_data_db['bill_no']
-                date0 = str(row_data_db['date_time'])
-                old_biller = row_data_db['user']
-                pname = row_data_db['patient_name']
-                mobile_number = 123456789
-                headers = self.total_holdings_details.db_header
-                name_mobile_inp = get_name_mobile_no(pname)
-                if name_mobile_inp.exec_() == name_mobile_inp.Accepted:
-                    pnameNew, mobile_number = name_mobile_inp.get_inp()
-                    if pnameNew.strip() == "":
-                        pnameNew = pname
-                    # print(pnameNew, mobile_number)
-                    row_data_db['mobile_no'] = mobile_number.strip()
-                    row_data_db['patient_name'] = pnameNew.strip()
-                    set_list = ""
-                    for k, v in row_data_db.items():
-                        if k != 'id':
-                            set_list = f"{set_list},{k}='{v}'"
-                    set_list = set_list[1:]
-                    # print(set_list)
-                    messge = self.total_holdings_details.update_rows_by_column_values(set_argument=set_list,
-                                                                                      criteria=f"id='{id}'")
-                    # print(messge)
-                    #
-                    # print(type(self.df_reception_payin))
-                    # print(self.df_reception_payin.columns)
-
-                    mask1 = self.df_reception_payin["Bill Number"] == billNo
-                    mask2 = self.df_reception_payin["Date"] == date0
-                    index = self.df_reception_payin[mask1 & mask2].index
-                    # self.df_reception_payin.drop(index, axis=0, inplace=True)
-                    # print(index)
-                    # print(self.df_reception_payin.iloc[index])
-                    self.df_reception_payin.loc[index, ["Patient Name"]] = pnameNew
-                    self.holdingModel.update(self.df_reception_payin, key="New")
-                    self.holdingModel.layoutChanged.emit()
-                    self.holdingTable.clearSelection()
-                    id = f"{pnameNew}_{mobile_number}"
-
-                    items = [self.Holding_List.item(x).text() for x in range(self.Holding_List.count())]
-                    if id not in items:
-                        self.Holding_List.addItem(id)
-        else:
-            QMessageBox.information(self, 'Insufficient data !!',
-                                    f'Insufficient data in selected  transaction/bill..')
 
 
 if __name__ == '__main__':
@@ -1147,8 +1161,10 @@ if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    super_trend = stock_super_trend_display()
-    super_trend.show()
+    mysql_data={'user': 'kiran', 'passwd': 'pass1word', 'port': 3306, 'host': 'localhost', 'db': 'stock_database'}
+    super_trend = indexes_display(**mysql_data)
+    # super_trend.show()
+    super_trend.showMaximized()
     # if gui_switch.exec_() == gui_switch.Accepted:
     #     plot_all_data = gui_switch.get_inp()
     #     print("Plot all data ?",plot_all_data)

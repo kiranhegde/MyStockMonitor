@@ -64,24 +64,26 @@ def Supertrend(df, atr_period, multiplier):
     }, index=df.index)
 
 
-atr_period = 10
-atr_multiplier = 3.0
+atr_period = 8
+atr_multiplier = 1.5
 
 stock_list = ['NAUKRI.NS']
+
 for symbol in stock_list:
     df = yf.download(symbol, start='2020-01-01')
     supertrend = Supertrend(df, atr_period, atr_multiplier)
     df = df.join(supertrend)
-# print(df.tail(15))
+print(df.tail(4).to_string())
 
-# visualization
-# plt.figure(figsize=(16, 9), dpi=360)
-plt.figure()
-plt.grid()
-plt.plot(df['Close'], linewidth=2, label='Close Price')
-plt.plot(df['Final Lowerband'], 'g', label='Final Lowerband')
-plt.plot(df['Final Upperband'], 'r', label='Final Upperband')
-plt.show()
+# exit()
+# # visualization
+# # plt.figure(figsize=(16, 9), dpi=360)
+# plt.figure()
+# plt.grid()
+# plt.plot(df['Close'], linewidth=2, label='Close Price')
+# plt.plot(df['Final Lowerband'], 'g', label='Final Lowerband')
+# plt.plot(df['Final Upperband'], 'r', label='Final Upperband')
+# plt.show()
 
 
 
@@ -106,20 +108,20 @@ def backtest_supertrend(df, investment):
             equity -= share * close[i]
             entry.append((i, close[i]))
             in_position = True
-            print(f'Buy {share} shares at {round(close[i], 2)} on {df.index[i].strftime("%Y/%m/%d")}')
+            # print(f'Buy {share} shares at {round(close[i], 2)} on {df.index[i].strftime("%Y/%m/%d")}')
         # if in position & price is not on uptrend -> sell
         elif in_position and not is_uptrend[i]:
             equity += share * close[i] - commission
             exit.append((i, close[i]))
             in_position = False
-            print(f'Sell at {round(close[i], 2)} on {df.index[i].strftime("%Y/%m/%d")}')
+            # print(f'Sell at {round(close[i], 2)} on {df.index[i].strftime("%Y/%m/%d")}')
     # if still in position -> sell all share
     if in_position:
         equity += share * close[i] - commission
 
     earning = equity - investment
     roi = round(earning / investment * 100, 2)
-    print(f'Earning from investing Rs. 100k is Rs{round(earning, 2)} (ROI = {roi}%)')
+    # print(f'Earning from investing Rs. {investment} is Rs{round(earning, 2)} (ROI = {roi}%)')
     return entry, exit, roi
 
 
@@ -141,24 +143,34 @@ for e in exit:
     plt.plot(df.index[e[0]], e[1], marker='v', color='red', markersize=12, linewidth=0, label='Exit')
 plt.show()
 
-exit()
+# exit()
 # get the full stock list of S&P 500
 # payload = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
 # stock_list = payload[0]['Symbol'].values.tolist()
 
-stock_list = ["DIXON.NS", "ACRYSIL.NS", "ASTRAL.NS", 'DMART.NS']
+# stock_list = ["DIXON.NS", "ACRYSIL.NS", "ASTRAL.NS", 'DMART.NS']
+stock_list = ["NAUKRI.NS"]
 
 supertrend_stocks = []
+atr_period = 8
+atr_multiplier = 1.5
 # loop through each symbol
 for symbol in stock_list:
     df = yf.download(symbol, start='2010-01-01', threads=False)
-    if len(df) == 0: continue
+    # print(df.head(3).to_string())
+    if len(df) == 0:
+        continue
+    else:
+        print("#",len(df))
     supertrend = Supertrend(df, atr_period, atr_multiplier)
+    print(supertrend_stocks)
     if not supertrend['Supertrend'][-2] and supertrend['Supertrend'][-1]:
         supertrend_stocks.append(symbol)
 
+print(len(supertrend_stocks))
 for s in supertrend_stocks:
-    print(s, end=', ')
+    # print(s, end=', ')
+    print(s)
 
 
 # BONUS: parameter optimization
@@ -178,13 +190,13 @@ def find_optimal_parameter(df):
         entry, exit, roi = backtest_supertrend(new_df, 100000)
         roi_list.append((period, multiplier, roi))
 
-    print(pd.DataFrame(roi_list, columns=['ATR_period', 'Multiplier', 'ROI']))
+    # print(pd.DataFrame(roi_list, columns=['ATR_period', 'Multiplier', 'ROI']))
 
     # return the best parameter set
     return max(roi_list, key=lambda x: x[2])
 
 
-df = yf.download('TSLA', start='2010-01-01')
+df = yf.download('NAUKRI.NS', start='2010-01-01')
 optimal_param = find_optimal_parameter(df)
 
 print(f'Best parameter set: ATR Period={optimal_param[0]}, Multiplier={optimal_param[1]}, ROI={optimal_param[2]}')
