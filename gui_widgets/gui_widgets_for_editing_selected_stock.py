@@ -1,20 +1,19 @@
-from PyQt5.QtCore import Qt, QRegExp, QDateTime, QDate
-from PyQt5.QtGui import QIcon, QRegExpValidator
-from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateTimeEdit, QDateEdit \
+from PyQt5.QtCore import Qt, QRegExp, QDate
+from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateEdit \
     , QCheckBox, QDialogButtonBox, QMessageBox, QPushButton \
     , QVBoxLayout, QFormLayout, QHBoxLayout, QGroupBox \
-    , QGridLayout, QFrame
+    , QFrame
 
-import datetime
 # from DataBase.label_names import PAY_TYPE_HOSPITAL1, PAY_TYPE_HOSPITAL2, PAYIN_DEPARTMENT_HOSPITAL, PAYIN_KEY_HOSPITAL, \
 #     DATE_TIME, DATE_TIME1, \
 #     PAYIN_KEY_PHARMACY, PAYOUT_KEY_PHARMACY, PAYIN_DEPARTMENT_PHARMACY, PAY_TYPE_PHARMACY1, \
 #     PAY_TYPE_PHARMACY2
 import pandas as pd
 from utility.utility_functions import make_nested_dict, parse_str
-from utility.libnames import AGENCY_LIST, EXCHANGE_LIST,TRADE_TYPE_BUY
-from utility.date_time import DATE_TIME1,DATE_FMT_DMY,DATE_TIME
-from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
+from share.libnames import AGENCY_LIST, TRADE_TYPE_BUY
+from utility.date_time import DATE_TIME1,DATE_FMT_DMY
+from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER
 
 
 class edit_selected_stock(QDialog):

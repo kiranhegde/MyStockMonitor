@@ -1,25 +1,21 @@
-import copy
-import os
 import pandas as pd
 
 from PyQt5 import QtWebEngineWidgets
-from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QTimer, QDateTime
+from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QDateTime
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, QLabel, QMessageBox, \
+from PyQt5.QtWidgets import QWidget, QMenu, QAction, QTableView, QMessageBox, \
     QVBoxLayout, QHBoxLayout, QGroupBox, \
-    QGridLayout, QAbstractItemView, \
+    QAbstractItemView, \
     QHeaderView, QSplitter, QFileDialog
 
 # from babel.numbers import format_currency
 import datetime
-import yfinance as yf
 
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME
-from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS
 from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
     CURRENT_HOLDING_DB_TO_DISPLAY, CURRENT_HOLDINGS_HEADER_DROP_LIST, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST, \
-    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, TRADE_TYPE, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB
+    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, \
+    CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB
 
 from gui_widgets.gui_widgets_for_adding_new_stock import add_new_stock as new_stock
 from gui_widgets.gui_widgets_for_editing_selected_stock import edit_selected_stock
@@ -30,15 +26,14 @@ import copy
 # from DataBase.mysql_crud import mysql_table_crud
 from utility.tableViewModel import pandasModel
 from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
-from utility.utility_functions import gen_id, make_nested_dict, parse_str, weighted_average, get_nested_dist_value
+from utility.utility_functions import make_nested_dict, parse_str
 from os.path import expanduser
 from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
-from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id, \
-    symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split
+from utility.utility_functions import gen_id, \
+    symbol_date_string, create_current_holdings_csv_file_names
 
-from display_tabs.utility_display_tab import get_current_holdings_history, get_current_holdings_history_mp
+from display_tabs.utility_display_tab import get_current_holdings_history_mp
 
-import plotly.express as px
 from plotly import graph_objs as go
 from plotly.subplots import make_subplots
 # from plotly.tools import make_subplots

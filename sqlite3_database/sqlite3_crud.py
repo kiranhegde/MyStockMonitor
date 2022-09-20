@@ -1,7 +1,7 @@
 from pathlib import Path
 import sqlite3
 from sqlite3 import Error
-from utility.libnames import MYSQL_SQLITE_DB_LOGIN
+from share.libnames import MYSQL_SQLITE_DB_LOGIN
 
 class sqlite3_crud:
     def __init__(self, **kwargs):

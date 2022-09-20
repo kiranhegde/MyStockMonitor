@@ -1,20 +1,18 @@
-import datetime
 import os.path
 from pathlib import Path
 import pandas as pd
 import random
-import numpy as np
 from pandas_datareader import data as web
 
 
-from utility.libnames import PDIR, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS, \
+from share.libnames import PDIR, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS, \
     PATH_TO_DATABASE, PATH_TO_DATABASE_BACKUP, PATH_TO_DATABASE_SOLD_HOLDINGS, PATH_TO_DATABASE_SOLD_HOLDINGS_BKP, \
     PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP
 
 from utility.utility_functions import make_nested_dict
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, create_current_holdings_table_db_query, \
-    create_transaction_table_db_query, create_sold_holdings_table_db_query, create_all_holdings_table_db_query, \
+from mysql_tools.tables_and_headers import create_transaction_table_db_query, \
+    create_all_holdings_table_db_query, \
     SOLD_HOLDING_DB_HEADER, BANK_TRANSACTIONS_DB_HEADER, TRADE_TYPE, \
     BANK_TRANSACTIONS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER
 # CURRENT_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, \

@@ -4,20 +4,17 @@ import datetime
 import ast
 import random
 import numpy as np
-import pandas as pd
 from pathlib import Path
 from sqlite3_database.sqlite3_crud import sqlite3_crud
 
-from collections import defaultdict
-
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME,\
-    TOTAL_HOLDINGS_DB_TABLE_NAME,TOTAL_HOLDINGS_DB_HEADER, \
-    SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME,\
+from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_TABLE_NAME,TOTAL_HOLDINGS_DB_HEADER, \
     BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
 
-from utility.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS\
-    ,PATH_TO_DATABASE_SOLD_HOLDINGS,PATH_TO_DATABASE_CURRENT_INDEX
+from share.libnames import PDIR, MYSQL_SQLITE_DB, \
+    MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS \
+    , PATH_TO_DATABASE_SOLD_HOLDINGS, PATH_TO_DATABASE_CURRENT_INDEX, \
+    PATH_TO_DATABASE_WATCHLIST
 
 def get_statementNameByDate(name, bill_day=None):
     if bill_day:
@@ -208,6 +205,22 @@ def date_symbol_split(symbol_start_date_end_date):
     return symbol, start_date, end_date
 
 # date_symbol_split('ADANIGREEN_from_2020-10-14_to_2020-12-11')
+def create_watchlist_csv_file_names(symbol_df):
+    # mask = df["current_holding"] == True
+    # symbol_df = df[mask]
+    # print(symbol_df.head(3).to_string())
+    # exit()
+    symbol_csv_path_list = make_nested_dict()
+    for index, row in symbol_df.iterrows():
+        symbol = row['equity']
+        buy_date = row['buy_date']
+        # buy_date = datetime.date.today()
+        symbol_buy_date = symbol_date_string(symbol, buy_date)
+        path_to_csv_file = os.path.join(PATH_TO_DATABASE_WATCHLIST, f"{symbol_buy_date}_history.csv")
+        # print(path_to_csv_file)
+        symbol_csv_path_list[symbol_buy_date]=path_to_csv_file
+    return  symbol_csv_path_list
+
 
 def create_current_holdings_csv_file_names(symbol_df):
     # mask = df["current_holding"] == True

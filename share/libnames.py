@@ -22,9 +22,11 @@ mysql_db_name = "stock_database"
 PATH_TO_DATABASE = 'database'
 PATH_TO_DATABASE_BACKUP = 'database_backup'
 PATH_TO_DATABASE_CURRENT_HOLDINGS = os.path.join(PDIR, PATH_TO_DATABASE, 'current_holdings')
+PATH_TO_DATABASE_WATCHLIST = os.path.join(PDIR, PATH_TO_DATABASE, 'watchlist')
 PATH_TO_DATABASE_CURRENT_INDEX = os.path.join(PDIR, PATH_TO_DATABASE, 'index_history')
 PATH_TO_DATABASE_SOLD_HOLDINGS = os.path.join(PDIR, PATH_TO_DATABASE, 'sold_holdings')
 PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP = os.path.join(PDIR, PATH_TO_DATABASE_BACKUP, 'current_holdings')
+PATH_TO_DATABASE_WATCHLIST_BKP = os.path.join(PDIR, PATH_TO_DATABASE_BACKUP, 'watchlist')
 PATH_TO_DATABASE_SOLD_HOLDINGS_BKP = os.path.join(PDIR, PATH_TO_DATABASE_BACKUP, 'sold_holdings')
 PATH_TO_DATABASE_INDEX_BKP = os.path.join(PDIR, PATH_TO_DATABASE_BACKUP,
                                       'index_history')
@@ -39,3 +41,8 @@ EXCHANGE_LIST = ['NSE', 'BSE']
 TRANS_TYPE_LIST = ["Credit", "Debit"]
 TRADE_TYPE_SELL = ["Sell","Intraday Buy","Intraday Sell"]
 TRADE_TYPE_BUY = ["Buy","Intraday Buy","Intraday Sell"]
+
+# plot range /history
+HISTORY_YEARS=4
+EMA_YEARS=2
+SMA_YEARS=3

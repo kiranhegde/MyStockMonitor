@@ -1,9 +1,9 @@
-from PyQt5.QtCore import Qt, QRegExp, QDateTime, QDate
-from PyQt5.QtGui import QIcon, QRegExpValidator
-from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateTimeEdit, QDateEdit \
+from PyQt5.QtCore import Qt, QRegExp, QDate
+from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateEdit \
     , QCheckBox, QDialogButtonBox, QMessageBox, QPushButton \
     , QVBoxLayout, QFormLayout, QHBoxLayout, QGroupBox \
-    , QGridLayout, QFrame
+    , QFrame
 
 # from DataBase.label_names import PAY_TYPE_HOSPITAL1, PAY_TYPE_HOSPITAL2, PAYIN_DEPARTMENT_HOSPITAL, PAYIN_KEY_HOSPITAL, \
 #     DATE_TIME, DATE_TIME1, \
@@ -11,9 +11,9 @@ from PyQt5.QtWidgets import QDialog, QLineEdit, QLabel, QComboBox, QDateTimeEdit
 #     PAY_TYPE_PHARMACY2
 import pandas as pd
 from utility.utility_functions import make_nested_dict, parse_str
-from utility.libnames import AGENCY_LIST, EXCHANGE_LIST,TRADE_TYPE_BUY
-from utility.date_time import DATE_TIME1,  DATE_TIME,DATE_FMT_DMY
-from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER,TRADE_TYPE
+from share.libnames import AGENCY_LIST, TRADE_TYPE_BUY
+from utility.date_time import DATE_TIME1, DATE_FMT_DMY
+from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_DB_HEADER
 
 
 class add_new_stock(QDialog):

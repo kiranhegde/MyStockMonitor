@@ -252,7 +252,13 @@ class mysql_table_crud(object):
                 sql = f"{sql} {order} "
             sql = f"{sql} ;"
             self.cursor.execute(sql)
-            return self.cursor.fetchall()
+            data=self.cursor.fetchall()
+            if len(data) == 0:
+                dummy={}
+                for col in self.db_header:
+                    dummy[col]=None
+                data=[dummy]
+            return data
         except Error as err:
             return f"Error: '{err}'"
 
@@ -336,7 +342,7 @@ class mysql_table_crud(object):
         try:
             self.cursor.execute(query)
             self.conn.commit()
-            message = "Executed successful"
+            message = "Executed successfuly"
         except Error as err:
             message = f"Error: '{err}'"
         return message

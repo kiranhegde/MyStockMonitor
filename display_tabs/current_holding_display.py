@@ -1,28 +1,22 @@
-import copy
-import os
 import pandas as pd
 
 from PyQt5 import QtWebEngineWidgets
-import PyQt5.sip
-from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QTimer, QDateTime
+from PyQt5.QtCore import Qt, QPoint, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, \
-    QLabel, QMessageBox, \
+from PyQt5.QtWidgets import QWidget, QMenu, QAction, QTableView, \
+    QMessageBox, \
     QVBoxLayout, QHBoxLayout, QGroupBox, \
-    QGridLayout, QAbstractItemView, \
+    QAbstractItemView, \
     QHeaderView, QSplitter, QFileDialog
 
 # from babel.numbers import format_currency
 import datetime
-import yfinance as yf
 
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME
-from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS
 from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
     CURRENT_HOLDING_DB_TO_DISPLAY, CURRENT_HOLDINGS_HEADER_DROP_LIST, \
     CURRENT_HOLDINGS_HEADER_DISPLAY_LIST, \
-    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, TRADE_TYPE, \
+    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, \
     CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB
 
 from gui_widgets.gui_widgets_for_adding_new_stock import \
@@ -37,19 +31,15 @@ import copy
 # from DataBase.mysql_crud import mysql_table_crud
 from utility.tableViewModel import pandasModel
 from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
-from utility.utility_functions import gen_id, make_nested_dict, parse_str, \
-    weighted_average, get_nested_dist_value
+from utility.utility_functions import make_nested_dict, parse_str
 from os.path import expanduser
-from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
-from utility.utility_functions import reduce_mem_usage, \
-    symbol_date_range_string, date_symbol_split, gen_id, \
-    symbol_date_string, create_current_holdings_csv_file_names, \
-    create_sold_holdings_csv_file_names, symbol_date_split
+from utility.date_time import DATE_FMT_YMD, DATE_FMT_DMY
+from utility.utility_functions import gen_id, \
+    symbol_date_string, create_current_holdings_csv_file_names
+from share.libnames import EMA_YEARS,SMA_YEARS
 
-from display_tabs.utility_display_tab import get_current_holdings_history, \
-    get_current_holdings_history_mp
+from display_tabs.utility_display_tab import get_current_holdings_history_mp
 
-import plotly.express as px
 from plotly import graph_objs as go
 from plotly.subplots import make_subplots
 # from plotly.tools import make_subplots
@@ -73,7 +63,7 @@ class list_of_holdings_display(QWidget):
 
         self.current_holding_data_df = self.get_current_holdings_details()
         # print(self.current_holding_data_df.head(10).to_string())
-        #
+        # exit()
         self.current_holding_history = self.extract_current_holdings_history()
         # print(self.current_holding_history.keys())
 
@@ -182,21 +172,36 @@ class list_of_holdings_display(QWidget):
         # https: // stackoverflow.com / questions / 47797383 / plotly - legend - next - to - each - subplot - python
         # buy_date = pd.to_datetime(buy_date).date()
         # print(type(buy_date),buy_date)
+        if symbol == 'None':
+            fig = make_subplots(rows=1, cols=1,
+                                vertical_spacing=0.01,
+                                shared_xaxes=True)
+            self.data_plot_browser.setHtml(
+                fig.to_html(include_plotlyjs='cdn'))
+            return
+
         buy_date = datetime.datetime.strptime(buy_date, DATE_FMT_DMY)
         buy_date = datetime.datetime.strftime(buy_date, DATE_FMT_YMD)
         # buy_date = datetime.datetime.strptime(buy_date, DATE_FMT_YMD)
         symbol_buy_date = symbol_date_string(symbol, buy_date)
         # print(symbol_buy_date)
-        df = self.current_holding_history[symbol_buy_date]
-        df['Date'] = pd.to_datetime(df['Date']).dt.date
+        try:
+            df = self.current_holding_history[symbol_buy_date]
+            df['Date'] = pd.to_datetime(df['Date']).dt.date
+        except FileNotFoundError:
+            QMessageBox.information(self, f'{symbol} history missing !!',
+                                    f'Please download stock history of {symbol} ')
+            return
 
         if moving_avg == 'EMA':
-            start_date = datetime.date.today() - datetime.timedelta(1 * 365)
+            start_date = datetime.date.today() - datetime.timedelta(
+                EMA_YEARS * 365)
             mask = df['Date'] > start_date
             df = df.loc[mask].copy()
             start_date0 = df['Date'].iloc[0]
         elif moving_avg == 'SMA':
-            start_date = datetime.date.today() - datetime.timedelta(3 * 365)
+            start_date = datetime.date.today() - datetime.timedelta(SMA_YEARS
+                                                                    * 365)
             # df['Date']=pd.to_datetime(df['Date']).dt.date
             mask = df['Date'] > start_date
             df = df.loc[mask].copy()
@@ -308,8 +313,9 @@ class list_of_holdings_display(QWidget):
                 df['MA20'] = df['Close'].rolling(window=20,
                                                  min_periods=1).mean()
 
-            fig.add_hline(y=price, line_width=2, line_color="red", opacity=0.7,
-                          name='Buy Avg.')
+            fig.add_hline(y=price, line_width=2, line_color="red",
+                          opacity=0.7)
+
 
             # Plot volume trace on 2nd row
             colors = ['green' if row['Open'] - row['Close'] >= 0

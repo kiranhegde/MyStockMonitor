@@ -35,63 +35,26 @@ INDEX_NAME_DICT={"NIFTY50":"^NSEI",
 dummy_stock_history={'Date': {1: '2017-09-19', 2: '2017-09-20'}, 'Open': {1: 268.0, 2: 269.5}, 'High': {1: 270.0, 2: 272.0}, 'Low': {1: 264.0, 2: 267.75},
                      'Close': {1: 267.75, 2: 271.5}, 'Adj Close': {1: 222.625, 2: 225.75}, 'Volume': {1: 33882424.0, 2: 9604767.0}}
 
-#                           Database  details
-# db column names
+#
+# mysql table header names
+INDEXES_DB_HEADER = ['id','ref_number','from_date','indice_name','remarks']
 TOTAL_HOLDINGS_DB_HEADER = ['id', 'ref_number', 'date', 'type', 'agency', 'equity', 'quantity', 'price',
                             'fees', 'avg_price', 'current_holding', 'remarks']
-# Calculations df
 TOTAL_HOLDINGS_EXTRA_HEADER = ['transact_val', 'cashflow', 'prev_units', 'cml_units', 'prev_cost',
                                'cml_cost', 'gain_loss', 'yield']
 # cml- cummulative
-# Final column names
 TOTAL_HOLDINGS_CALC_HEADER = TOTAL_HOLDINGS_DB_HEADER + TOTAL_HOLDINGS_EXTRA_HEADER
-# Display names
+
 TOTAL_HOLDINGS_HEADER_NAME = ["ID", "Reference", "Date", "Type", "Agency", "Equity", "Quantity", "Price", "Fees",
                               "AvgPrice", 'CurrentHoldings', "Remarks", "TransactionValue", 'CashFlow', 'PrevUnits',
                               'CummUnits', 'PrevCosts','CummCosts','GainLoss','Yield']
 
-# Current holding details
-# Columns to be displayed in the gui
-CURRENT_HOLDING_LIST_DISPLAY = ['ref_number', 'equity', 'date', 'avg_price', 'quantity']
-CURRENT_HOLDING_DB_TO_DISPLAY = dict(zip(TOTAL_HOLDINGS_CALC_HEADER, TOTAL_HOLDINGS_HEADER_NAME))
-# list of header name to be dropped
-CURRENT_HOLDINGS_HEADER_DROP_LIST = []
-for hdr_name in TOTAL_HOLDINGS_DB_HEADER:
-    if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
-        CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
 
-# Current holding headers
-# CURRENT_HOLDINGS_HEADER = ["ID", "Reference", "Agency", "Exchange", "Equity", "Buy Date", "Avg. Price", "Quantity",
-#                            "Remarks"]
-# list of header name to be retained
-CURRENT_HOLDINGS_HEADER_DISPLAY_LIST = []
-for hdr_name in CURRENT_HOLDING_LIST_DISPLAY:
-    CURRENT_HOLDINGS_HEADER_DISPLAY_LIST.append(CURRENT_HOLDING_DB_TO_DISPLAY[hdr_name])
-
-CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB = dict((v,k) for k,v in CURRENT_HOLDING_DB_TO_DISPLAY.items())
-
-# mysql table header names
-# Watchlist table detsils
 WATCHLIST_DB_HEADER = ['id', 'ref_number', 'equity', 'buy_date',
                        'remarks']
 WATCHLIST_HEADER_NAME = ["ID", "Reference", "Equity","Date",
                          'Remarks']
-WATCHLIST_DISPLAY = ['ref_number', 'equity', 'buy_date']
-WATCHLIST_DB_TO_DISPLAY = dict(zip(WATCHLIST_DB_HEADER, WATCHLIST_HEADER_NAME))
-WATCHLIST_HEADER_DROP_LIST = []
-for hdr_name in WATCHLIST_DB_HEADER:
-    if hdr_name not in WATCHLIST_DISPLAY:
-        WATCHLIST_HEADER_DROP_LIST.append(hdr_name)
 
-WATCHLIST_HEADER_DISPLAY_LIST = []
-for hdr_name in WATCHLIST_DISPLAY:
-    WATCHLIST_HEADER_DISPLAY_LIST.append(WATCHLIST_DB_TO_DISPLAY[hdr_name])
-
-WATCHLIST_HEADER_DISPLAY_LIST2DB = dict((v,k) for k,v in WATCHLIST_DB_TO_DISPLAY.items())
-
-
-# index tabl display
-INDEXES_DB_HEADER = ['id','ref_number','from_date','indice_name','remarks']
 INDEX_HEADER_NAME=['ID','Reference','From_Date','Indice_Name','Remarks']
 INDEX_LIST_DISPLAY=['from_date','indice_name']
 INDEX_DB_TO_DISPLAY = dict(zip(INDEXES_DB_HEADER, INDEX_HEADER_NAME))
@@ -101,6 +64,39 @@ INDEX_HEADER_DISPLAY_LIST = []
 for hdr_name in INDEX_LIST_DISPLAY:
     INDEX_HEADER_DISPLAY_LIST.append(INDEX_DB_TO_DISPLAY[hdr_name])
 
+# Current holding headers
+CURRENT_HOLDINGS_HEADER = ["ID", "Reference", "Agency", "Exchange", "Equity", "Buy Date", "Avg. Price", "Quantity",
+                           "Remarks"]
+
+# Columns to be displayed in the gui
+CURRENT_HOLDING_LIST_DISPLAY = ['ref_number', 'equity', 'date', 'avg_price', 'quantity']
+WATCHLIST_DISPLAY = ['ref_number', 'equity', 'buy_date']
+
+CURRENT_HOLDING_DB_TO_DISPLAY = dict(zip(TOTAL_HOLDINGS_CALC_HEADER, TOTAL_HOLDINGS_HEADER_NAME))
+WATCHLIST_DB_TO_DISPLAY = dict(zip(WATCHLIST_DB_HEADER, WATCHLIST_HEADER_NAME))
+
+# list of header name to be dropped
+CURRENT_HOLDINGS_HEADER_DROP_LIST = []
+for hdr_name in TOTAL_HOLDINGS_DB_HEADER:
+    if hdr_name not in CURRENT_HOLDING_LIST_DISPLAY:
+        CURRENT_HOLDINGS_HEADER_DROP_LIST.append(hdr_name)
+
+WATCHLIST_HEADER_DROP_LIST = []
+for hdr_name in WATCHLIST_DB_HEADER:
+    if hdr_name not in WATCHLIST_DISPLAY:
+        WATCHLIST_HEADER_DROP_LIST.append(hdr_name)
+
+# list of header name to be retained
+CURRENT_HOLDINGS_HEADER_DISPLAY_LIST = []
+for hdr_name in CURRENT_HOLDING_LIST_DISPLAY:
+    CURRENT_HOLDINGS_HEADER_DISPLAY_LIST.append(CURRENT_HOLDING_DB_TO_DISPLAY[hdr_name])
+
+WATCHLIST_HEADER_DISPLAY_LIST = []
+for hdr_name in WATCHLIST_DISPLAY:
+    WATCHLIST_HEADER_DISPLAY_LIST.append(WATCHLIST_DB_TO_DISPLAY[hdr_name])
+
+CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB = dict((v,k) for k,v in CURRENT_HOLDING_DB_TO_DISPLAY.items())
+WATCHLIST_HEADER_DISPLAY_LIST2DB = dict((v,k) for k,v in WATCHLIST_DB_TO_DISPLAY.items())
 # print(CURRENT_HOLDING_DB_TO_DISPLAY)
 # print(CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB)
 # print(WATCHLIST_DB_TO_DISPLAY)
@@ -108,8 +104,11 @@ for hdr_name in INDEX_LIST_DISPLAY:
 
 SOLD_HOLDING_DB_HEADER = ['id', 'ref_number', 'agency', 'exchange', 'equity', 'buy_date', 'buy_price',
                           'sale_date', 'sale_price', 'sale_quantity', 'remarks']
+BANK_TRANSACTIONS_DB_HEADER = ['id', 'agency', 'transaction_date', 'transaction_id', 'amount', 'from_bank',
+                               'to_bank', 'remarks']
 # BANK_TRANSACTIONS_DB_HEADER=['id','to_agency','transaction_date','transaction_id','amount','from_bank','to_bank','remarks']
 DEFAULTS_DB_HEADER = ['brokerage', 'gst', 'stt', 'itax']
+
 HOLDINGS_HEADER = ["ID", "Reference", "Buy Date", 'Type', "Agency", "Exchange", "Equity", "Quantity", "Avg. Price",
                    "Remarks"]
 
@@ -123,8 +122,6 @@ SOLD_HOLDINGS_LIST_DISPLAY = ['equity', 'buy_date', 'buy_price', 'sale_date', 's
 SOLD_HOLDING_DB_TO_DISPLAY = dict(zip(SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_HEADER))
 
 # bank transactions
-BANK_TRANSACTIONS_DB_HEADER = ['id', 'agency', 'transaction_date', 'transaction_id', 'amount', 'from_bank',
-                               'to_bank', 'remarks']
 BANK_TRANSACTIONS_HEADER = ['ID', "Agency", "Date", "Reference_no", "Amount", "From_Bank", "To_Bank", "Remarks"]
 BANK_TRANSACTIONS_DISPLAY = ['id','agency', 'transaction_date','transaction_id', 'amount', 'from_bank','to_bank', 'remarks']
 BANK_TRANSACTIONS_LIST_DISPLAY = ["agency", 'transaction_date', 'amount']

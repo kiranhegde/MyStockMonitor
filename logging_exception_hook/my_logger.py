@@ -1,6 +1,6 @@
 import logging
 
-from utility.libnames import LOG_FILE
+from share.libnames import LOG_FILE
 
 def getlogger1():
     # logger

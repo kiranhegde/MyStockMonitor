@@ -1,23 +1,18 @@
 import pandas as pd
 
 from PyQt5 import QtWebEngineWidgets
-from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QTimer, QDateTime
+from PyQt5.QtCore import Qt, QPoint, pyqtSlot
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, \
-    QLabel, QMessageBox, \
+from PyQt5.QtWidgets import QWidget, QMenu, QAction, QTableView, \
     QVBoxLayout, QHBoxLayout, QGroupBox, \
-    QGridLayout, QAbstractItemView, \
-    QHeaderView, QSplitter, QFileDialog
+    QAbstractItemView, \
+    QHeaderView, QSplitter
 
 # from babel.numbers import format_currency
 import datetime
-import yfinance as yf
 
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, \
-    SOLD_HOLDING_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, \
-    BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
-from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS
+from mysql_tools.tables_and_headers import BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER
 from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
     CURRENT_HOLDING_DB_TO_DISPLAY, \
     SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, \
@@ -40,28 +35,20 @@ from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
 # from GuiWidgets.gui_widgets_for_payin_new import new_Bill_payin as new_bill_payin
 # from GuiWidgets.gui_widgets_for_payin_edit import edit_Bill_payin as edit_bill_payin
 # from DataBase.utilities import parse_str
-import dateparser
-import copy
 import os
 # from DataBase.mysql_crud import mysql_table_crud
 from utility.tableViewModel import pandasModel
 from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
 from mysql_tools.tables_and_headers import TOTAL_HOLDINGS_CALC_HEADER, \
     TOTAL_HOLDINGS_EXTRA_HEADER
-from utility.utility_functions import reduce_mem_usage, \
-    symbol_date_range_string, date_symbol_split, gen_id, \
-    symbol_date_string, create_current_holdings_csv_file_names, \
-    create_sold_holdings_csv_file_names, symbol_date_split, \
-    create_current_holdings_csv_file_names, make_nested_dict
-from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
-from utility.libnames import TRADE_TYPE_SELL, TRADE_TYPE_BUY
+from utility.utility_functions import date_symbol_split, symbol_date_string, \
+    create_current_holdings_csv_file_names
+from share.libnames import TRADE_TYPE_SELL, TRADE_TYPE_BUY
 
-from display_tabs.utility_display_tab import get_current_holdings_history, \
-    get_sold_holdings_history, get_current_holdings_history_mp
+from display_tabs.utility_display_tab import get_sold_holdings_history, get_current_holdings_history_mp
 
 from os.path import expanduser
 
-import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -91,6 +78,14 @@ class holdings_returns_display(QWidget):
         screen_print = self.overall_holdings.copy()
         drop_list_of_columns = ['current_holding', 'ref_number']
         screen_print.drop(drop_list_of_columns, axis=1, inplace=True)
+        column_list = list(screen_print.columns.values)
+        column_list = column_list[4:]
+        for col in column_list:
+            if col != 'yield':
+                screen_print[col] = screen_print[col].round(2)
+
+        screen_print['yield'] = screen_print['yield'] * 100
+        screen_print['yield'] = screen_print['yield'].round(3)
         print(screen_print.to_string())
         # mask = self.overall_holdings['equity'] == "AFFLE"
         # df=self.overall_holdings[mask].copy()

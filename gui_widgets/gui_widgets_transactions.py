@@ -1,10 +1,9 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QDateTime, QVariant, QDate
-from PyQt5.QtCore import Qt, QRegExp, QDateTime, QDate
+from PyQt5.QtCore import QPoint, pyqtSlot
+from PyQt5.QtCore import Qt, QRegExp, QDate
 from PyQt5.QtGui import QIcon, QRegExpValidator
-import re, datetime, ast
 import pandas as pd
 
 from babel.numbers import format_currency
@@ -12,11 +11,10 @@ from babel.numbers import format_currency
 # from db_management import read_all_transaction,save_transactionDB,delTransDB,gen_id
 from utility.utility_functions import make_nested_dict, get_nested_dist_value, parse_str, gen_id, \
     extablish_db_connection
-from mysql_tools.tables_and_headers import BANK_TRANSACTIONS_LIST_DISPLAY, BANK_TRANSACTIONS_DB_TO_DISPLAY, \
+from mysql_tools.tables_and_headers import BANK_TRANSACTIONS_DB_TO_DISPLAY, \
     BANK_TRANSACTIONS_DB_TABLE_NAME, BANK_TRANSACTIONS_DB_HEADER, BANK_TRANSACTIONS_DISPLAY,BANK_TRANSACTIONS_HEADER
 from mysql_tools.mysql_crud import mysql_table_crud
-from utility.libnames import MYSQL_SQLITE_DB
-from utility.libnames import AGENCY_LIST,TRANS_TYPE_LIST
+from share.libnames import AGENCY_LIST,TRANS_TYPE_LIST
 from utility.tableViewModel import pandasModel
 from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
 from utility.date_time import DATE_TIME1,DATE_FMT_DMY

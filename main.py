@@ -18,6 +18,7 @@ from display_tabs.indexes_trend_display import indexes_display
 from display_tabs.overall_holding_returns_display import \
     holdings_returns_display
 from display_tabs.super_trend_display import stock_super_trend_display
+from display_tabs.watchlist_display import watchlist_display_tab
 from gui_widgets.gui_widgets_add_mysql_login import update_mysql_login
 from gui_widgets.gui_widgets_return_history_data_selection import \
     return_history_range_selection
@@ -25,34 +26,33 @@ from gui_widgets.gui_widgets_transactions import \
     show_transactions as bank_transactions_details
 from mysql_tools.mysql_crud import mysql_table_crud
 from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME, \
-    create_current_holdings_table_db_query, \
+    create_current_holdings_table_db_query,WATCHLIST_DB_TABLE_NAME, \
     create_transaction_table_db_query, create_sold_holdings_table_db_query, \
-    create_all_holdings_table_db_query, \
+    create_all_holdings_table_db_query, create_watchlist_table_db_query, \
     BANK_TRANSACTIONS_DB_HEADER, SOLD_HOLDINGS_DB_TABLE_NAME, \
-    BANK_TRANSACTIONS_DB_TABLE_NAME, \
+    BANK_TRANSACTIONS_DB_TABLE_NAME,WATCHLIST_DB_HEADER, WATCHLIST_DISPLAY, \
     SOLD_HOLDINGS_LIST_DISPLAY, SOLD_HOLDING_DB_TO_DISPLAY, \
     TOTAL_HOLDINGS_DB_HEADER, TOTAL_HOLDINGS_DB_TABLE_NAME, \
     CURRENT_HOLDING_LIST_DISPLAY, CURRENT_HOLDING_DB_TO_DISPLAY, \
     BANK_TRANSACTIONS_LIST_DISPLAY, \
     BANK_TRANSACTIONS_DB_TO_DISPLAY, INDEX_DB_TABLE_NAME, \
-    create_indexes_table_db_query, INDEXES_DB_HEADER,INDEX_NAME_DICT
+    create_indexes_table_db_query, INDEXES_DB_HEADER,INDEX_NAME_DICT, \
+    INDEX_LIST_DISPLAY
 from sqlite3_database.sqlite3_crud import sqlite3_crud
 from utility.fonts_style import FONT1, TABLE_HEADER_FONT, TABLE_FONT
-from utility.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, \
+from share.libnames import PDIR, WELCOME, MYSQL_SQLITE_DB, \
     MYSQL_SQLITE_DB_LOGIN, PATH_TO_DATABASE_CURRENT_HOLDINGS, \
     PATH_TO_DATABASE, PATH_TO_DATABASE_BACKUP, PATH_TO_DATABASE_SOLD_HOLDINGS, \
     PATH_TO_DATABASE_SOLD_HOLDINGS_BKP, \
     PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP,PATH_TO_DATABASE_CURRENT_INDEX, \
-    PATH_TO_DATABASE_INDEX_BKP
+    PATH_TO_DATABASE_INDEX_BKP,PATH_TO_DATABASE_WATCHLIST_BKP, \
+    PATH_TO_DATABASE_WATCHLIST
 from utility.tableViewModel import pandasModel
 from utility.utility_functions import make_nested_dict
 from utility.utility_functions import reduce_mem_usage, \
     symbol_date_range_string, symbol_date_string, \
     create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, \
     symbol_date_split,create_current_index_csv_file_names
-
-
-import PyQt5.sip # required to function exe file
 
 
 # PEP8 Reformat Code press Ctrl+Alt+L.
@@ -113,6 +113,14 @@ class MyMainWindow(QMainWindow):
 
         # self.update_stock_history_multithread()
         # self.update_stock_history_multi_process()
+        # symbol_df = self.get_indexes_details()
+        # self.index_trend_data_df = symbol_df.loc[:, INDEX_LIST_DISPLAY]
+        # file_names = self.create_index_filename(self.index_trend_data_df)
+        # # print(file_names)
+        #
+        # # self.current_index_history = self.extract_current_holdings_history()
+        # self.current_index_history = self.extract_current_index_history(
+        #     file_names)
 
         # exit()
 
@@ -218,6 +226,29 @@ class MyMainWindow(QMainWindow):
         self.total_index_details = mysql_table_crud(db_table=INDEX_DB_TABLE_NAME,
                                                     db_header=INDEXES_DB_HEADER,
                                                     **self.db_cfg)
+        self.total_watchlist_details = mysql_table_crud(
+            db_table=WATCHLIST_DB_TABLE_NAME, db_header=WATCHLIST_DB_HEADER,
+            **self.db_cfg)
+
+    def get_indexes_details(self):
+        data = make_nested_dict()
+        for col in INDEXES_DB_HEADER:
+            data[col] = None
+        data = self.total_index_details.read_row_by_column_values()
+        df = pd.DataFrame(data)
+
+        return df
+
+    def get_watchlist_details(self):
+        data = make_nested_dict()
+        for col in WATCHLIST_DB_HEADER:
+            data[col] = None
+        data = self.total_watchlist_details.read_row_by_column_values()
+        symbol_df = pd.DataFrame(data)
+        symbol_df = symbol_df.loc[:, WATCHLIST_DISPLAY]
+
+        return symbol_df
+
 
     def transaction_history(self):
         transactions_df = self.get_all_transaction_details()
@@ -815,6 +846,7 @@ class MyMainWindow(QMainWindow):
         list_of_tables = {
             # "xyz": create_receptionPAYIN_table_db_query("xyz"),
             CURRENT_HOLDINGS_DB_TABLE_NAME: create_current_holdings_table_db_query(CURRENT_HOLDINGS_DB_TABLE_NAME),
+            WATCHLIST_DB_TABLE_NAME: create_watchlist_table_db_query(WATCHLIST_DB_TABLE_NAME),
             SOLD_HOLDINGS_DB_TABLE_NAME: create_sold_holdings_table_db_query(SOLD_HOLDINGS_DB_TABLE_NAME),
             BANK_TRANSACTIONS_DB_TABLE_NAME: create_transaction_table_db_query(BANK_TRANSACTIONS_DB_TABLE_NAME),
             TOTAL_HOLDINGS_DB_TABLE_NAME: create_all_holdings_table_db_query(TOTAL_HOLDINGS_DB_TABLE_NAME),
@@ -828,12 +860,15 @@ class MyMainWindow(QMainWindow):
 
             if table not in table_list:
                 mbox0 = QMessageBox.question(self, "Create Database",
-                                             f"Database empty \nCreate  database  table {table}  ? ",
+                                             f"Database empty \nCreate  "
+                                             f"database  table  named {table}  "
+                                             f"? ",
                                              QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
                 if mbox0 == QMessageBox.Yes:
                     query = list_of_tables[table]
                     print_message = mysql_table_crud(**self.db_cfg).create_table(query)
+                    print(print_message)
                     QMessageBox.information(self, "Table creation", print_message)
 
     # def add_columns_name_to_table(self):
@@ -922,6 +957,12 @@ class MyMainWindow(QMainWindow):
         self.tabs_selected[title] = True
         self.load_selected_tabs(list_of_holdings_display(**self.db_cfg), title)
 
+    def watchlist_tab(self):
+        title = f"Watchlist: {datetime.date.today()}"
+        self.tabs_selected[title] = True
+        self.load_selected_tabs(watchlist_display_tab(**self.db_cfg), title)
+
+
     def load_returns(self):
         title = f"Returns: {datetime.date.today()}"
         self.tabs_selected[title] = True
@@ -932,17 +973,51 @@ class MyMainWindow(QMainWindow):
         #                          self.plot_all_returns_history, **self.db_cfg), title)
 
     def update_stock_and_index_history(self):
-        # self.update_stock_history()
-        self.update_stock_history_multithread()
-        # symbol_df = self.get_indexes_details()
-        # # self.index_trend_data_df = self.get_indexes_details()
-        # # print(INDEX_LIST_DISPLAY)
-        # self.index_trend_data_df = symbol_df.loc[:, INDEX_LIST_DISPLAY]
-        # file_names = self.create_index_filename(self.index_trend_data_df)
-        # self.extract_current_index_history(file_names)
+        self.update_stock_history()
+
+        # index data update
+        symbol_df = self.get_indexes_details()
+        self.index_trend_data_df = symbol_df.loc[:, INDEX_LIST_DISPLAY]
+        file_names = self.create_index_filename(self.index_trend_data_df)
+        self.current_index_history = self.extract_current_index_history(
+            file_names)
+        # watchlist update
+
+
 
     def update_stock_history(self):
         self.backup_folder(src_path=PATH_TO_DATABASE_CURRENT_HOLDINGS, trg_path=PATH_TO_DATABASE_CURRENT_HOLDINGS_BKP)
+        data = self.total_holdings_details.read_row_by_column_values()
+        df = pd.DataFrame(data)
+        mask = df["current_holding"] == True
+        symbol_df = df.loc[mask].copy()
+        # symbol_df =df[mask]
+
+        symbol_list = []
+        f_count = 0
+        for index, row in symbol_df.iterrows():
+            symbol =row['equity']
+            buy_date =row['date']
+            symbol_buy_date=symbol_date_string(symbol,buy_date)
+            # print(row.to_dict())
+            path_to_csv_file = os.path.join(PATH_TO_DATABASE_CURRENT_HOLDINGS, f"{symbol_buy_date}_history.csv")
+            if os.path.isfile(path_to_csv_file):
+                f_count += 1
+                print(path_to_csv_file, 'exists..')
+            else:
+                symbol_ns = f"{symbol}.NS"
+                data = yf.download(symbol_ns,threads=True)
+                print(symbol, path_to_csv_file)
+                data.to_csv(path_to_csv_file)
+                symbol_list.append(symbol)
+            f_count += 1
+
+
+        print(f_count, "files are available")
+
+
+    def update_watchlist_history(self):
+        self.backup_folder(src_path=PATH_TO_DATABASE_WATCHLIST, trg_path=PATH_TO_DATABASE_WATCHLIST_BKP)
         data = self.total_holdings_details.read_row_by_column_values()
         df = pd.DataFrame(data)
         mask = df["current_holding"] == True
@@ -1329,6 +1404,15 @@ class MyMainWindow(QMainWindow):
         tb.addAction(holdings_tab)
         tb.addSeparator()
 
+        tb.addSeparator()
+        holdings_tab = QAction(QIcon("icons/folder_saved_search.png"), "Watchlist",
+                               self)
+        holdings_tab.triggered.connect(self.watchlist_tab)
+        holdings_tab.setStatusTip("Today's information/data")
+        holdings_tab.setToolTip("Today's information/data")
+        tb.addAction(holdings_tab)
+        tb.addSeparator()
+
         load_returns_info = QAction(QIcon("icons/dollar.png"), "Returns", self)
         load_returns_info.triggered.connect(self.load_returns)
         load_returns_info.setStatusTip("Load returns")
@@ -1386,13 +1470,13 @@ class MyMainWindow(QMainWindow):
         # if self.my_access != "Administrator":
         import_data.setEnabled(False)
 
-        export_data = QAction(QIcon("icons/document-export.png"), "Export", self)
-        export_data.triggered.connect(self.export_mysql_csv)
-        export_data.setStatusTip("Export data from CSV")
-        export_data.setToolTip("Export data from CSV")
-        tb.addAction(export_data)
-        tb.addSeparator()
-        export_data.setEnabled(False)
+        # export_data = QAction(QIcon("icons/document-export.png"), "Export", self)
+        # export_data.triggered.connect(self.export_mysql_csv)
+        # export_data.setStatusTip("Export data from CSV")
+        # export_data.setToolTip("Export data from CSV")
+        # tb.addAction(export_data)
+        # tb.addSeparator()
+        # export_data.setEnabled(False)
         # if self.my_access != "Administrator":
         #     export_data.setEnabled(False)
 
@@ -1511,24 +1595,9 @@ class MyMainWindow(QMainWindow):
         status = QProcess.startDetached(sys.executable, sys.argv)
         # print(status)
 
-    def refresh(self):
-        pass
-
     def quit_now(self):
         # logger.info(f"Exiting the program..")
         sys.exit(0)
-
-    def export_mysql_csv(self):
-        # rk_db = mysql_table_crud.db_connection()
-        rk_db, print_message = mysql_table_crud(**self.db_cfg).db_connection()
-        # logger.info(f"Exporting data to CSV by {self.usr}")
-        export_inp = export_mysql_dates(rk_db)
-        if export_inp.exec_() == export_inp.Accepted:
-            message = export_inp.get_inp()
-            # logger.info(f"Exported to CSV file..")
-        else:
-            pass
-            # #logger.info(f"Export to CSV cancelled")
 
     def call_import_csv_to_mysql(self, csv_to_df=None, table_name=None, csv_data=False):
         # import_csv = import_csv_to_mysql(MSQL_LOGIN,MSQL_PASSWD,)
@@ -1567,29 +1636,6 @@ class MyMainWindow(QMainWindow):
                              index_label='id')
             return
 
-    def report_to_excel(self):
-        # user_list=[]
-        # user_list.clear()
-        # print("0", self.user_list)
-        # logger.info(f"Excel report generation: {self.usr}")
-        # rk_db = mysql_table_crud.db_connection()
-
-        rk_db, print_message = mysql_table_crud(**self.db_cfg).db_connection()
-        if self.bsheet_medical:
-            export_inp = report_to_excel_by_date(rk_db, self.usr, self.user_list, pharmacy=True)
-        else:
-            export_inp = report_to_excel_by_date(rk_db, self.usr, self.user_list)
-        if export_inp.exec_() == export_inp.Accepted:
-            message = export_inp.get_inp()
-            # logger.info(f"Excel report generated  by {self.usr}")
-        else:
-            pass
-
-    # export_inp = export_mysql_dates(self.rk_db)
-    # if export_inp.exec_() == export_inp.Accepted:
-    #     message = export_inp.get_inp()
-    # else:
-    #     pass
 
     def get_user_list(self):
         login_conn = mysql_table_crud(db_table=LOGIN_TABLE,

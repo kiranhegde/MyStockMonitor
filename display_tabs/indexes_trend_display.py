@@ -1,13 +1,12 @@
-import copy
 import os
 import pandas as pd
 
 from PyQt5 import QtWebEngineWidgets
-from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QTimer, QDateTime
+from PyQt5.QtCore import Qt, QPoint, pyqtSlot, QDateTime
 from PyQt5.QtGui import QIcon, QFont
-from PyQt5.QtWidgets import QWidget, QListWidget, QMenu, QAction, QTableView, QLabel, QMessageBox, \
+from PyQt5.QtWidgets import QWidget, QMenu, QAction, QTableView, QMessageBox, \
     QVBoxLayout, QHBoxLayout, QGroupBox, \
-    QGridLayout, QAbstractItemView, \
+    QAbstractItemView, \
     QHeaderView, QSplitter, QFileDialog
 
 # from babel.numbers import format_currency
@@ -15,11 +14,8 @@ import datetime
 import yfinance as yf
 
 from mysql_tools.mysql_crud import mysql_table_crud
-from mysql_tools.tables_and_headers import CURRENT_HOLDINGS_DB_TABLE_NAME
-from utility.libnames import PATH_TO_DATABASE_CURRENT_HOLDINGS,PATH_TO_DATABASE_CURRENT_INDEX
-from mysql_tools.tables_and_headers import CURRENT_HOLDING_LIST_DISPLAY, \
-    CURRENT_HOLDING_DB_TO_DISPLAY, CURRENT_HOLDINGS_HEADER_DROP_LIST, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST, \
-    TOTAL_HOLDINGS_DB_TABLE_NAME, TOTAL_HOLDINGS_DB_HEADER, TRADE_TYPE, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB,\
+from mysql_tools.tables_and_headers import CURRENT_HOLDING_DB_TO_DISPLAY, CURRENT_HOLDINGS_HEADER_DROP_LIST, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST, \
+    TOTAL_HOLDINGS_DB_HEADER, CURRENT_HOLDINGS_HEADER_DISPLAY_LIST2DB,\
     INDEX_DB_TABLE_NAME,INDEXES_DB_HEADER,INDEX_NAME_DICT,INDEX_HEADER_DISPLAY_LIST,INDEX_LIST_DISPLAY
 
 
@@ -32,16 +28,13 @@ import copy
 # from DataBase.mysql_crud import mysql_table_crud
 from utility.tableViewModel import pandasModel
 from utility.fonts_style import TABLE_HEADER_FONT, TABLE_FONT
-from utility.utility_functions import gen_id, make_nested_dict, parse_str, weighted_average, get_nested_dist_value
+from utility.utility_functions import make_nested_dict, parse_str
 from os.path import expanduser
 from utility.date_time import DATE_TIME, DATE_FMT_YMD, DATE_FMT_DMY
-from utility.utility_functions import reduce_mem_usage, symbol_date_range_string, date_symbol_split, gen_id, \
-    symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split,\
+from utility.utility_functions import reduce_mem_usage, gen_id, \
+    symbol_date_string, symbol_date_split,\
     create_current_index_csv_file_names
 
-from display_tabs.utility_display_tab import get_current_holdings_history, get_current_holdings_history_mp
-
-import plotly.express as px
 from plotly import graph_objs as go
 from plotly.subplots import make_subplots
 # from plotly.tools import make_subplots
@@ -270,7 +263,8 @@ class indexes_display(QWidget):
         self.setLayout(self.mainLayout)
 
     # def plot_graphs(self, price=100, buy_date=datetime.date.today(), symbol="DMART"):
-    def plot_graphs(self, buy_date=datetime.date.today(), symbol="NIFTY50"):
+    def plot_graphs(self, moving_avg = 'SMA',buy_date=datetime.date.today(),
+                    symbol="NIFTY50"):
         # https: // stackoverflow.com / questions / 47797383 / plotly - legend - next - to - each - subplot - python
         # buy_date = pd.to_datetime(buy_date).date()
         # print(type(buy_date),buy_date)
@@ -346,7 +340,6 @@ class indexes_display(QWidget):
             # fig.show()
 
             # add moving averages to df
-            moving_avg = 'SMA'
             if moving_avg == 'SMA':
                 sma_dict={'SMA20':[20,'black'],'SMA44':[44,'coral'],
                           'SMA50':[50,'blue'],'SMA100':[100,'green'],
@@ -890,17 +883,21 @@ class indexes_display(QWidget):
             self.menu_current_portfolio = QMenu(self)
 
             # newAct.setShortcut(QKeySequence("Ctrl+N"))
-            historyAct = QAction(QIcon(""), "History", self, triggered=self.plot_history)
-            newAct = QAction(QIcon(""), "New", self, triggered=self.add_new_stock)
-            editeAct = QAction(QIcon(""), "Edit Bill", self, triggered=self.edit_selected_stock)
-            # duelistAct = QAction(QIcon(""), "Register Unpaid", self, triggered=self.move_to_unpaid_payin)
-            deleteAct = QAction(QIcon(""), "Delete", self, triggered=self.delete_selected_stock)
-            soldAct = QAction(QIcon(""), 'Sold', self, triggered=self.stock_sold)
-            avgAct = QAction(QIcon(""), 'Average', self, triggered=self.stock_avg)
+            historyActSMA = QAction(QIcon(""), "HistorySMA", self,
+                                    triggered=self.plot_historySMA)
+            historyActEMA = QAction(QIcon(""), "HistoryEMA", self,
+                                    triggered=self.plot_historyEMA)
+            # newAct = QAction(QIcon(""), "New", self, triggered=self.add_new_stock)
+            # editeAct = QAction(QIcon(""), "Edit Bill", self, triggered=self.edit_selected_stock)
+            # # duelistAct = QAction(QIcon(""), "Register Unpaid", self, triggered=self.move_to_unpaid_payin)
+            # deleteAct = QAction(QIcon(""), "Delete", self, triggered=self.delete_selected_stock)
+            # soldAct = QAction(QIcon(""), 'Sold', self, triggered=self.stock_sold)
+            # avgAct = QAction(QIcon(""), 'Average', self, triggered=self.stock_avg)
             # CloseBalanceAct = QAction(QIcon(""), "Clear Balance and Close a/c", self, triggered=self.clear_and_close)
             # remAct.setStatusTip('Delete stock from database')
             # showAct = QAction(QIcon(""), 'Show', self, triggered=self.showBill)
-            histStk = self.menu_current_portfolio.addAction(historyAct)
+            histStk = self.menu_current_portfolio.addAction(historyActSMA)
+            histStk = self.menu_current_portfolio.addAction(historyActEMA)
             # addAct = self.menu_current_portfolio.addAction(newAct)
             # editStk = self.menu_current_portfolio.addAction(editeAct)
             # delStk = self.menu_current_portfolio.addAction(deleteAct)
@@ -910,7 +907,13 @@ class indexes_display(QWidget):
 
         self.menu_current_portfolio.exec_(self.sender().viewport().mapToGlobal(pos))
 
-    def plot_history(self):
+    def plot_historySMA(self):
+        self.plot_history()
+
+    def plot_historyEMA(self):
+        self.plot_history(moving_avg='EMA')
+
+    def plot_history(self, moving_avg='SMA'):
         # fetch data from mysql
         index = self.holdingTable.currentIndex().row()
         ncol = self.holdingModel.columnCount()
@@ -921,7 +924,7 @@ class indexes_display(QWidget):
 
         # print(row_data)
         # self.plot_graphs(price=row_data[3], buy_date=row_data[2], symbol=row_data[1])
-        self.plot_graphs(buy_date=row_data[0], symbol=row_data[1])
+        self.plot_graphs(moving_avg,buy_date=row_data[0], symbol=row_data[1])
 
         # item_name = item.text()
 

@@ -7,6 +7,7 @@ from utility.utility_functions import reduce_mem_usage, make_nested_dict, symbol
     gen_id, \
     symbol_date_string, create_current_holdings_csv_file_names, create_sold_holdings_csv_file_names, symbol_date_split
 
+from share.libnames import HISTORY_YEARS
 from multiprocessing import Pool
 import multiprocessing
 from threading import Thread
@@ -23,7 +24,7 @@ def get_current_holdings_history_mp(holdings_csv_file_names):
 
     def download_and_read_csv(symbol,filename):
         # data = yf.download(symbol_ns, threads=True)
-        data = yf.download(symbol,threads=True)
+        data = yf.download(symbol,threads=True,start=deltatime)
         data.to_csv(filename)
         f=csv_file_read(filename)
         return f
@@ -38,7 +39,7 @@ def get_current_holdings_history_mp(holdings_csv_file_names):
 
     # pool = Pool(processes=6)
     jobs=[]
-    deltatime = datetime.date.today() - datetime.timedelta(5 * 365)
+    deltatime = datetime.date.today() - datetime.timedelta(HISTORY_YEARS * 365)
     for symbol_buy_date, path_to_csv_file in holdings_csv_file_names.items():
 
         if os.path.isfile(path_to_csv_file):
